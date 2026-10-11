@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { SAVED_JOBS_QUERY_KEY } from "@/lib/query-client";
 
@@ -19,13 +19,4 @@ export function useSavedJobs() {
     },
     staleTime: 30 * 1000,
   });
-}
-
-/**
- * Returns a function that invalidates the saved-jobs query cache,
- * causing all subscribed components to re-fetch fresh data.
- */
-export function useInvalidateSavedJobs() {
-  const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: SAVED_JOBS_QUERY_KEY });
 }

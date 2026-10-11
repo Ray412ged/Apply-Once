@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Pencil, RefreshCw, Check, X, Clock, AlertTriangle, Store, Building2, FileSpreadsheet, Link2, Eye } from "lucide-react";
+import { Loader2, Plus, Pencil, RefreshCw, Check, X, Clock, AlertTriangle, Store, Building2, Link2, Eye } from "lucide-react";
 import EmployerSourceForm from "@/components/admin/EmployerSourceForm";
 import ImportISolvedHireJob from "@/components/admin/ImportISolvedHireJob";
 
@@ -66,7 +66,7 @@ export default function EmployerSources() {
     try {
       await base44.entities.EmployerSource.update(source.id, { source_status: newStatus });
       await loadData();
-    } catch (err) {
+    } catch {
       alert("Failed to update status");
     }
   };
@@ -75,7 +75,7 @@ export default function EmployerSources() {
     try {
       await base44.entities.EmployerSource.update(source.id, { approved: true, source_status: "Active" });
       await loadData();
-    } catch (err) {
+    } catch {
       alert("Failed to approve");
     }
   };
@@ -123,7 +123,7 @@ export default function EmployerSources() {
         verified_at: new Date().toISOString(),
       });
       setNeedsVerification((prev) => prev.filter((j) => j.id !== jobId));
-    } catch (err) {
+    } catch {
       alert("Failed to verify job");
     }
   };
@@ -190,18 +190,6 @@ export default function EmployerSources() {
           <div>
             <p className="font-medium text-foreground text-sm">Add Local Job</p>
             <p className="text-xs text-muted-foreground">Manual job entry</p>
-          </div>
-        </button>
-        <button
-          onClick={() => navigate("/admin/local-jobs/import")}
-          className="bg-card rounded-2xl border border-border p-4 flex items-center gap-3 hover:border-primary/30 transition-colors text-left"
-        >
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <FileSpreadsheet className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <p className="font-medium text-foreground text-sm">Import Local Jobs</p>
-            <p className="text-xs text-muted-foreground">CSV bulk import</p>
           </div>
         </button>
       </div>

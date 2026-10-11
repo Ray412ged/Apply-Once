@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
-import { clearGuestFlag, clearAllSessionData, purgeLegacyLocalStorage } from '@/lib/guestStorage';
+import { clearAllSessionData, purgeLegacyLocalStorage } from '@/lib/sessionCleanup';
 import { recordLoginOnceThisSession } from '@/lib/recordActivity';
 import { queryClientInstance } from '@/lib/query-client';
 
@@ -18,8 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
-    // One-time migration: move any legacy localStorage data to sessionStorage
-    // and purge old keys before auth state is evaluated.
+    // Remove obsolete local app state before auth is evaluated.
     purgeLegacyLocalStorage();
     checkAppState();
   }, []);
@@ -100,12 +99,6 @@ export const AuthProvider = ({ children }) => {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
-      // Clear the guest flag (but not guest data) now that the user is
-      // confirmed authenticated. This ensures loadProfileCompletion() reads
-      // from the API instead of sessionStorage, and enables the guest-data
-      // migration in Home.jsx to run. Guest data is preserved in sessionStorage
-      // for syncGuestToAccount() to migrate if it exists.
-      clearGuestFlag();
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
@@ -132,7 +125,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = (shouldRedirect = true) => {
     // Comprehensive session wipe: clear all app-specific sessionStorage
-    // (guest data, workspace state, builder drafts, UI flags) and the
+    // (workspace state, builder drafts, UI flags) and the
     // React Query cache so no user data lingers on a shared device.
     clearAllSessionData();
     queryClientInstance.clear();

@@ -183,13 +183,6 @@ export function detectAtsType(url) {
 }
 
 /**
- * Returns the full ATS platform config object.
- */
-export function getAtsPlatform(atsType) {
-  return ATS_PLATFORMS[atsType] || null;
-}
-
-/**
  * Determines whether the ATS requires the user to create or sign in to
  * an employer-specific account before completing the application.
  */
@@ -258,21 +251,4 @@ export function formatAtsLabel(atsType) {
     Phenom: "Phenom",
   };
   return labels[atsType] || atsType;
-}
-
-/**
- * Extracts the Taleo career section identifier from a Taleo application URL.
- */
-export function extractTaleoCareerSection(url) {
-  if (!url) return null;
-  const match = url.match(/careersection\/([^/]+)\//i);
-  return match ? match[1] : null;
-}
-
-/**
- * Builds a Taleo application URL from a job ID and employer URL pattern.
- */
-export function buildTaleoApplicationUrl(pattern, jobId) {
-  if (!pattern || !jobId) return null;
-  return pattern.replace("{job_id}", jobId);
 }

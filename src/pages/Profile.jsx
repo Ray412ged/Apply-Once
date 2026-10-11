@@ -1,9 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useProfileData } from "@/hooks/useProfileData";
+import { useProfileData, useInvalidateProfileData } from "@/hooks/useProfileData";
+import EmploymentStatusCard from "@/components/dashboard/EmploymentStatusCard";
 import { PROFILE_SECTIONS } from "@/lib/profileSections";
 import ProgressBar from "@/components/ProgressBar";
-import { Loader2, ChevronRight, Check, CircleDashed } from "lucide-react";
+import { ChevronRight, Check, CircleDashed } from "lucide-react";
 import { ProfileSectionSkeleton } from "@/components/Skeleton";
 import {
   User as UserIcon,
@@ -34,6 +35,7 @@ const ICON_MAP = {
 export default function Profile() {
   const navigate = useNavigate();
   const { data, isLoading: loading } = useProfileData();
+  const invalidateProfileData = useInvalidateProfileData();
 
   if (loading) {
     return <ProfileSectionSkeleton />;
@@ -75,6 +77,10 @@ export default function Profile() {
             : "Profile sections complete!"}
         </p>
       </div>
+
+      {data?.profile && (
+        <EmploymentStatusCard profile={data.profile} onUpdated={invalidateProfileData} />
+      )}
 
       <div className="space-y-3">
         {PROFILE_SECTIONS.map((section) => {

@@ -70,8 +70,6 @@ export const SKILL_GROUPS = [
   },
 ];
 
-export const ALL_SKILLS = SKILL_GROUPS.flatMap((g) => g.skills);
-
 // Map skill names to their group
 export const SKILL_TO_GROUP = {};
 SKILL_GROUPS.forEach((g) => {

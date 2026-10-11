@@ -1,17 +1,14 @@
 import { base44 } from "@/api/base44Client";
-import { isGuest } from "@/lib/guestStorage";
 
 /**
  * Fire-and-forget activity recording for the Organizational Dashboard's
  * momentum/status calculations. Never blocks or throws into the caller —
  * this is a background signal, not something that should ever interrupt
- * the actual user action it's attached to. Skipped entirely for guests,
- * since there's no authenticated participant to attach the event to.
+ * the actual user action it's attached to.
  *
  * @param {"login"|"profile_section_completed"|"resume_generated"|"application_submitted"} eventType
  */
 export function recordActivity(eventType) {
-  if (isGuest()) return;
   base44.functions
     .invoke("recordParticipantActivity", { event_type: eventType })
     .catch((err) => {
@@ -29,8 +26,8 @@ const LOGIN_RECORDED_KEY = "apply_once_login_recorded_this_session";
  * AuthContext's checkUserAuth), not from a specific login form, so every
  * auth path is covered by one mechanism instead of one per method.
  *
- * Guarded by a sessionStorage flag (prefixed "apply_once_" so it's swept by
- * guestStorage's clearAllSessionData() on logout) so a page refresh for an
+ * Guarded by a sessionStorage flag (prefixed "apply_once_" so it is swept by
+ * session cleanup on logout) so a page refresh for an
  * already-logged-in user doesn't re-fire "login" on every load, while a
  * fresh login after logout correctly fires again.
  */

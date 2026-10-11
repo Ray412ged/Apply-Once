@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormError } from "@/components/ui/form-error";
-import { Lock, Loader2, AlertTriangle } from "lucide-react";
+import { Lock, Loader2 } from "lucide-react";
 import WelcomeAuthLayout from "@/components/WelcomeAuthLayout";
 
 export default function ResetPassword() {

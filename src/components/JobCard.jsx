@@ -1,10 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, DollarSign, Briefcase, Calendar, Bookmark, EyeOff, ExternalLink, Store, Mail, Phone } from "lucide-react";
+import { MapPin, DollarSign, Briefcase, Calendar, Bookmark, EyeOff, ExternalLink, Mail, Phone } from "lucide-react";
 import MatchBadge from "@/components/MatchBadge";
 import CompanyLogo from "@/components/jobs/CompanyLogo";
 import MatchExplanation from "@/components/jobs/MatchExplanation";
-import { useGuestJobGate } from "@/components/jobs/GuestJobGateContext";
 import { Button } from "@/components/ui/button";
 
 function formatPay(job) {
@@ -30,25 +29,18 @@ function postingAge(postingDate) {
 
 export default function JobCard({ job, matchLevel, matchScore, saved, onSave, onHide, preferences, profileData }) {
   const navigate = useNavigate();
-  const { requireAccount } = useGuestJobGate();
   const jobPath = `/jobs/${job.id}`;
   const location = [job.city, job.state].filter(Boolean).join(", ") || job.location;
   const pay = formatPay(job);
   const age = postingAge(job.posting_date);
 
-  // For guests, account-dependent actions open the conversion prompt
-  // instead of navigating / launching the employer link. The intended
-  // destination is remembered so the user returns to this job after auth.
   const handleCardClick = () => {
-    if (requireAccount(jobPath)) return;
     navigate(jobPath);
   };
   const guardNav = () => {
-    if (requireAccount(jobPath)) return;
     navigate(jobPath);
   };
   const guardExternal = (url) => {
-    if (requireAccount(jobPath)) return;
     window.open(url, "_blank", "noopener,noreferrer");
   };
   const stopProp = (e) => e.stopPropagation();
@@ -67,12 +59,6 @@ export default function JobCard({ job, matchLevel, matchScore, saved, onSave, on
                 {job.job_title}
               </h3>
               <p className="text-muted-foreground text-sm truncate">{job.employer_name}</p>
-              {job.local_job && (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mt-1">
-                  <Store className="w-3 h-3" />
-                  Local Employer
-                </span>
-              )}
             </div>
             {matchLevel && <MatchBadge level={matchLevel} score={matchScore} />}
           </div>
@@ -119,12 +105,12 @@ export default function JobCard({ job, matchLevel, matchScore, saved, onSave, on
               Continue to Employer Website
             </Button>
           ) : job.application_method === "Email employer" && job.application_email ? (
-            <Button size="sm" className="flex-1 h-9" onClick={() => requireAccount(jobPath)}>
+            <Button size="sm" className="flex-1 h-9" onClick={guardNav}>
               <Mail className="w-4 h-4 mr-1" />
               Email Employer
             </Button>
           ) : job.application_method === "Call employer" && job.application_phone ? (
-            <Button size="sm" className="flex-1 h-9" onClick={() => requireAccount(jobPath)}>
+            <Button size="sm" className="flex-1 h-9" onClick={guardNav}>
               <Phone className="w-4 h-4 mr-1" />
               Call Employer
             </Button>

@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { isGuest } from "@/lib/guestStorage";
 import { useProfileData } from "@/hooks/useProfileData";
-import { Button } from "@/components/ui/button";
 import {
   Settings,
   HelpCircle,
@@ -14,16 +11,13 @@ import {
   ChevronRight,
   LogOut,
   Cloud,
-  HardDrive,
   Building2,
-  Link2,
 } from "lucide-react";
 import SettingsSheet from "@/components/more/SettingsSheet";
 import HelpSheet from "@/components/more/HelpSheet";
 import PrivacySheet from "@/components/more/PrivacySheet";
 import AboutSheet from "@/components/more/AboutSheet";
 import DeleteProfileSheet from "@/components/more/DeleteProfileSheet";
-import DisconnectOrgSheet from "@/components/more/DisconnectOrgSheet";
 
 const MENU_ITEMS = [
   { id: "settings", label: "Settings", icon: Settings, subtitle: "Manage your preferences" },
@@ -33,19 +27,15 @@ const MENU_ITEMS = [
 ];
 
 export default function More() {
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const guest = isGuest();
   const { data: profileData } = useProfileData();
   const [openSheet, setOpenSheet] = useState(null);
   const [deleteMode, setDeleteMode] = useState(null);
   const [orgLink, setOrgLink] = useState(null);
-  const [org, setOrg] = useState(null);
-  const [orgLoading, setOrgLoading] = useState(!guest);
-  const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [orgLoading, setOrgLoading] = useState(true);
 
   useEffect(() => {
-    if (guest || !user?.id) {
+    if (!user?.id) {
       setOrgLoading(false);
       return;
     }
@@ -58,20 +48,9 @@ export default function More() {
           5
         );
         if (!active) return;
-        const link = links[0] || null;
-        setOrgLink(link);
-        if (link) {
-          try {
-            const orgRecord = await base44.entities.Organization.get(link.organization_id);
-            setOrg(orgRecord || null);
-          } catch (_) {
-            setOrg(null);
-          }
-        } else {
-          setOrg(null);
-        }
-      } catch (_) {
-        // ignore — the organization section simply won't render
+        setOrgLink(links[0] || null);
+      } catch {
+        // ignore — the employment support section simply won't render
       } finally {
         if (active) setOrgLoading(false);
       }
@@ -79,11 +58,10 @@ export default function More() {
     return () => {
       active = false;
     };
-  }, [user?.id, guest]);
+  }, [user?.id]);
 
   const profile = profileData?.profile;
-  const displayName =
-    profile?.preferred_name || profile?.first_name || (guest ? "Guest" : "User");
+  const displayName = profile?.preferred_name || profile?.first_name || "User";
   const contactEmail = profile?.email;
   const accountEmail = user?.email;
 
@@ -104,32 +82,20 @@ export default function More() {
           <div className="flex-1 min-w-0">
             <p className="font-medium text-foreground truncate">{displayName}</p>
             <p className="text-sm text-muted-foreground">
-              {guest ? "Guest Mode" : "Cloud Account"}
+              Cloud Account
             </p>
           </div>
         </div>
 
-        {/* Storage mode explanation */}
-        {guest ? (
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-accent/40 border border-primary/15">
-            <HardDrive className="w-4 h-4 text-accent-foreground flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-foreground">
-              Your profile is saved on this device only. Create a cloud account
-              to access it from any device.
-            </p>
-          </div>
-        ) : (
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-success/5">
-            <Cloud className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground">
-              Your profile is saved to your cloud account and accessible from
-              any device.
-            </p>
-          </div>
-        )}
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-success/5">
+          <Cloud className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            Your profile is saved to your account and accessible from any device.
+          </p>
+        </div>
 
         {/* Email distinction */}
-        {!guest && accountEmail && (
+        {accountEmail && (
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between text-sm gap-2">
               <span className="text-muted-foreground flex-shrink-0">Account login</span>
@@ -144,26 +110,7 @@ export default function More() {
           </div>
         )}
 
-        {guest && contactEmail && (
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-sm gap-2">
-              <span className="text-muted-foreground flex-shrink-0">Contact email</span>
-              <span className="font-medium text-foreground truncate">{contactEmail}</span>
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Guest: Create Cloud Account */}
-      {guest && (
-        <Button
-          onClick={() => (window.location.href = "/welcome")}
-          className="w-full h-12 font-semibold"
-        >
-          <Cloud className="w-5 h-5 mr-2" />
-          Create Cloud Account
-        </Button>
-      )}
 
       {/* Menu items */}
       <div className="bg-card rounded-2xl border border-border divide-y divide-border">
@@ -186,104 +133,22 @@ export default function More() {
         })}
       </div>
 
-      {/* Organization connection */}
-      {!guest && !orgLoading && (
+      {/* Auberle Employment Institute support */}
+      {!orgLoading && orgLink && (
         <div>
           <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Organization
+            Employment Support
           </h2>
-          <div className="bg-card rounded-2xl border border-border divide-y divide-border">
-            {orgLink && org ? (
-              <>
-                <div className="flex items-center gap-3 p-4">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Building2 className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{org.display_name || org.name}</p>
-                    <p className="text-sm text-muted-foreground">Connected</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => navigate("/organization-consent")}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-accent/50 transition-colors text-left"
-                >
-                  <Link2 className="w-5 h-5 text-muted-foreground" />
-                  <p className="font-medium text-foreground flex-1">Change organization</p>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </button>
-                <button
-                  onClick={() => setDisconnectOpen(true)}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-destructive/5 transition-colors text-left"
-                >
-                  <Trash2 className="w-5 h-5 text-destructive" />
-                  <p className="font-medium text-destructive flex-1">Disconnect</p>
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => navigate("/organization-consent")}
-                className="w-full flex items-center gap-3 p-4 hover:bg-accent/50 transition-colors text-left"
-              >
-                <Building2 className="w-5 h-5 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Connect to an organization</p>
-                  <p className="text-sm text-muted-foreground">Share your progress with a supporting organization</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Organization connection */}
-      {!guest && !orgLoading && (
-        <div>
-          <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Organization
-          </h2>
-          <div className="bg-card rounded-2xl border border-border divide-y divide-border">
-            {orgLink && org ? (
-              <>
-                <div className="flex items-center gap-3 p-4">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Building2 className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{org.display_name || org.name}</p>
-                    <p className="text-sm text-muted-foreground">Connected</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => navigate("/organization-consent")}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-accent/50 transition-colors text-left"
-                >
-                  <Link2 className="w-5 h-5 text-muted-foreground" />
-                  <p className="font-medium text-foreground flex-1">Change organization</p>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </button>
-                <button
-                  onClick={() => setDisconnectOpen(true)}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-destructive/5 transition-colors text-left"
-                >
-                  <Trash2 className="w-5 h-5 text-destructive" />
-                  <p className="font-medium text-destructive flex-1">Disconnect</p>
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => navigate("/organization-consent")}
-                className="w-full flex items-center gap-3 p-4 hover:bg-accent/50 transition-colors text-left"
-              >
-                <Building2 className="w-5 h-5 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Connect to an organization</p>
-                  <p className="text-sm text-muted-foreground">Share your progress with a supporting organization</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </button>
-            )}
+          <div className="bg-card rounded-2xl border border-border">
+            <div className="flex items-center gap-3 p-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-foreground">Auberle Employment Institute</p>
+                <p className="text-sm text-muted-foreground">Your employment support team</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -291,11 +156,10 @@ export default function More() {
       {/* Account actions */}
       <div>
         <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          {guest ? "Profile" : "Account"}
+          Account
         </h2>
         <div className="bg-card rounded-2xl border border-border divide-y divide-border">
-          {!guest && (
-            <>
+          <>
               <button
                 onClick={() => logout()}
                 className="w-full flex items-center gap-3 p-4 hover:bg-accent/50 transition-colors text-left"
@@ -317,17 +181,7 @@ export default function More() {
                 <Trash2 className="w-5 h-5 text-destructive" />
                 <p className="font-medium text-destructive flex-1">Delete Account</p>
               </button>
-            </>
-          )}
-          {guest && (
-            <button
-              onClick={() => { setDeleteMode("guest"); setOpenSheet("delete"); }}
-              className="w-full flex items-center gap-3 p-4 hover:bg-destructive/5 transition-colors text-left"
-            >
-              <Trash2 className="w-5 h-5 text-destructive" />
-              <p className="font-medium text-destructive flex-1">Delete Profile</p>
-            </button>
-          )}
+          </>
         </div>
       </div>
 
@@ -341,17 +195,6 @@ export default function More() {
       <PrivacySheet open={openSheet === "privacy"} onOpenChange={(v) => !v && closeSheet()} />
       <AboutSheet open={openSheet === "about"} onOpenChange={(v) => !v && closeSheet()} />
       <DeleteProfileSheet open={openSheet === "delete"} onOpenChange={(v) => !v && closeSheet()} mode={deleteMode} />
-      <DisconnectOrgSheet
-        open={disconnectOpen}
-        onOpenChange={setDisconnectOpen}
-        orgName={org?.display_name || org?.name}
-        participantId={user?.id}
-        organizationId={orgLink?.organization_id}
-        onDisconnected={() => {
-          setOrgLink(null);
-          setOrg(null);
-        }}
-      />
     </div>
   );
 }

@@ -1,53 +1,21 @@
 import React from "react";
 import { Eye, ArrowRight, Trash2, FileText, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import CompanyLogo from "@/components/jobs/CompanyLogo";
-import { requiresEmployerAccount } from "@/lib/atsDetection";
+const APPLIED_STATUSES = new Set([
+  "Submitted",
+  "Interview",
+  "Offer",
+  "Hired",
+  "Rejected",
+  "Not Selected",
+  "Withdrawn",
+  "Closed",
+  "Closed - No Response",
+]);
 
-const STATUS_BADGES = {
-  "Draft": "bg-muted text-muted-foreground",
-  "In Progress": "bg-primary/10 text-primary",
-  "Workspace Ready": "bg-warning/10 text-warning",
-  "Employer Account Required": "bg-destructive/10 text-destructive",
-  "Submitted": "bg-success/10 text-success",
-  "Interview": "bg-primary/10 text-primary",
-  "Offer": "bg-success/10 text-success",
-  "Rejected": "bg-destructive/10 text-destructive",
-  "Withdrawn": "bg-muted text-muted-foreground",
-  "Closed": "bg-muted text-muted-foreground",
-};
-
-const STATUS_PROGRESS = {
-  "Interested": 10,
-  "Preparing": 30,
-  "Ready for Review": 50,
-  "Submitted": 70,
-  "Interview": 85,
-  "Offer": 95,
-  "Rejected": 100,
-  "Withdrawn": 100,
-  "Closed": 100,
-};
-
-function getStatusBadge(app, job) {
-  const atsType = app.ats_type || job?.ats_type;
-  const pastSubmission = ["Submitted", "Interview", "Offer", "Rejected", "Withdrawn", "Closed"].includes(app.status);
-  if (atsType && requiresEmployerAccount(atsType) && !pastSubmission) {
-    return "Employer Account Required";
-  }
-  const mapping = {
-    "Interested": "Draft",
-    "Preparing": "In Progress",
-    "Ready for Review": "Workspace Ready",
-    "Submitted": "Submitted",
-    "Interview": "Interview",
-    "Offer": "Offer",
-    "Rejected": "Rejected",
-    "Withdrawn": "Withdrawn",
-    "Closed": "Closed",
-  };
-  return mapping[app.status] || "Draft";
+function getStatusBadge(app) {
+  return APPLIED_STATUSES.has(app.status) ? "Applied" : "In Progress";
 }
 
 export default function ApplicationsList({ applications, jobs, onViewJob, onContinue, onRemove }) {
@@ -64,8 +32,7 @@ export default function ApplicationsList({ applications, jobs, onViewJob, onCont
       <div className="space-y-2">
         {applications.map((app) => {
           const job = jobs[app.job_posting_id];
-          const badge = getStatusBadge(app, job);
-          const progress = STATUS_PROGRESS[app.status] ?? 0;
+          const badge = getStatusBadge(app);
           const hasResume = !!app.resume_document_id;
           return (
             <div
@@ -86,7 +53,7 @@ export default function ApplicationsList({ applications, jobs, onViewJob, onCont
                     {job?.employer_name}
                   </p>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${STATUS_BADGES[badge] || "bg-muted text-muted-foreground"}`}>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${badge === "Applied" ? "bg-success/10 text-success" : "bg-primary/10 text-primary"}`}>
                   {badge}
                 </span>
               </div>
@@ -96,17 +63,6 @@ export default function ApplicationsList({ applications, jobs, onViewJob, onCont
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <FileText className="w-3.5 h-3.5 text-success" />
                   <span>Resume attached</span>
-                </div>
-              )}
-
-              {/* Application progress */}
-              {progress > 0 && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Progress</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <Progress value={progress} className="h-1.5" />
                 </div>
               )}
 

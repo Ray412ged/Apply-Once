@@ -1,13 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useAuth } from "@/lib/AuthContext";
-import { isGuest } from "@/lib/guestStorage";
 import { generateResume } from "@/lib/resume/resumeGenerator";
 import { downloadResumePdf } from "@/lib/resume/resumePdf";
 import { markResumeViewed } from "@/lib/resume/resumeStorage";
 import ResumeDocument from "@/components/resume/ResumeDocument";
-import GuestAccountPrompt from "@/components/jobs/GuestAccountPrompt";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil, Download, Printer, Briefcase } from "lucide-react";
@@ -16,43 +14,22 @@ export default function Resume() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: profileData, isLoading } = useProfileData();
-  const guest = isGuest();
 
   const resume = useMemo(
     () => (profileData ? generateResume(profileData) : null),
     [profileData]
   );
 
-  const [showGuestGate, setShowGuestGate] = useState(false);
-
   // When an authenticated user views the resume, reset the "Updated"
   // signature so the Command Center returns to the "Ready" state until
   // the next profile change.
   useEffect(() => {
     if (resume?.canGenerate) {
-      markResumeViewed(resume, { user, guest, profileId: profileData?.profile?.id });
+      markResumeViewed(resume, { user, profileId: profileData?.profile?.id });
     }
-  }, [resume, user, guest]);
+  }, [resume, user, profileData?.profile?.id]);
 
   if (isLoading || !resume) return <DashboardSkeleton />;
-
-  // Guest download gate — account required to save/download.
-  if (showGuestGate && guest) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-2xl mx-auto px-4 py-6 no-print">
-          <Button variant="ghost" size="sm" onClick={() => setShowGuestGate(false)} className="mb-2">
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Resume
-          </Button>
-        </div>
-        <GuestAccountPrompt
-          redirectPath="/resume"
-          onReturn={() => setShowGuestGate(false)}
-          variant="page"
-        />
-      </div>
-    );
-  }
 
   if (!resume.canGenerate) {
     return (
@@ -77,13 +54,7 @@ export default function Resume() {
     );
   }
 
-  const handleDownload = () => {
-    if (guest) {
-      setShowGuestGate(true);
-      return;
-    }
-    downloadResumePdf(resume);
-  };
+  const handleDownload = () => downloadResumePdf(resume);
 
   const handlePrint = () => {
     window.print();

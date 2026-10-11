@@ -5,11 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormError } from "@/components/ui/form-error";
-import { Mail, Lock, Loader2, UserRound } from "lucide-react";
+import { Mail, Lock, Loader2 } from "lucide-react";
 import WelcomeAuthLayout from "@/components/WelcomeAuthLayout";
-import GoogleIcon from "@/components/GoogleIcon";
-import { setGuestMode, saveGuestSingle, setGuestIntroSeen, hasGuestIntroSeen } from "@/lib/guestStorage";
-import { consumeGuestRedirect } from "@/lib/guestRedirect";
+import { completePendingAuberleInvite, getPendingAuberleInvite } from "@/lib/auberleInvite";
 
 export default function Login() {
   const location = useLocation();
@@ -18,31 +16,20 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleGuest = () => {
-    setGuestMode(true);
-    saveGuestSingle("UserProfile", {
-      onboarding_status: "in_progress",
-      privacy_acknowledged: true,
-      terms_acknowledged: true,
-      consent_to_ai_processing: false,
-      profile_completion_percentage: 0,
-    });
-    if (!hasGuestIntroSeen()) {
-      setGuestIntroSeen();
-      navigate("/guest-intro");
-    } else {
-      navigate("/onboarding");
-    }
-  };
+  const pendingInvite = getPendingAuberleInvite();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (pendingInvite?.email && email.trim().toLowerCase() !== pendingInvite.email) {
+      setError("Use the email address from your Auberle Employment Institute invitation.");
+      return;
+    }
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = "/";
+      const inviteResult = await completePendingAuberleInvite();
+      window.location.href = inviteResult.completed ? "/onboarding" : "/";
     } catch (err) {
       const msg = (err.message || "").toLowerCase();
       // Unverified account — route to the verification screen (with the code
@@ -54,12 +41,7 @@ export default function Login() {
         msg.includes("not verified") ||
         msg.includes("before logging")
       ) {
-        // Same fallback as Register.jsx: prefer explicit navigation state,
-        // otherwise fall back to a guest's saved intended destination so an
-        // unverified guest routed here from a guest-gate still lands back
-        // where they meant to go after verifying.
-        const returnTo = location.state?.from || location.state?.returnTo || consumeGuestRedirect();
-        navigate("/verify-email", { state: { email, returnTo } });
+        navigate("/verify-email", { state: { email } });
         return;
       }
       setError(err.message || "Invalid email or password");
@@ -68,46 +50,13 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = () => {
-    // Google's OAuth flow is a full-page redirect round-trip, so React
-    // Router state can't survive it — this is exactly why saveGuestRedirect
-    // uses sessionStorage. Pass the guest's saved destination (or the safe
-    // "/home" default) directly as the post-auth redirect target instead of
-    // always hardcoding "/".
-    base44.auth.loginWithProvider("google", consumeGuestRedirect());
-  };
-
   return (
     <WelcomeAuthLayout
-      eyebrow="Employment Readiness Platform"
+      eyebrow="Auberle Employment Institute"
       title="Welcome back"
       subtitle="Log in to continue building your profile and applications."
-      footer={
-        <>
-          Don't have an account?{" "}
-          <Link to="/register" className="text-primary font-medium hover:underline">
-            Create one
-          </Link>
-        </>
-      }
+      footer={<>Apply Once access is provided through Auberle Employment Institute.</>}
     >
-      <Button
-        variant="outline"
-        className="w-full h-14 text-base font-semibold flex items-center justify-start mb-4"
-        onClick={handleGoogle}
-      >
-        <GoogleIcon className="w-5 h-5 mr-2" />
-        Continue with Google
-      </Button>
-
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-3 text-muted-foreground">or</span>
-        </div>
-      </div>
 
       <FormError id="login-error" className="mb-4">{error}</FormError>
 
@@ -164,14 +113,6 @@ export default function Login() {
         </Button>
       </form>
 
-      <Button
-        variant="ghost"
-        onClick={handleGuest}
-        className="w-full h-12 text-sm font-medium text-muted-foreground mt-3"
-      >
-        <UserRound className="w-4 h-4 mr-2" />
-        Try without an account
-      </Button>
     </WelcomeAuthLayout>
   );
 }

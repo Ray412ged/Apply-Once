@@ -1,7 +1,7 @@
 /**
  * Employment Profile Snapshot builder.
  *
- * Normalizes raw profile data (from useProfileData, guest storage, or
+ * Normalizes raw profile data (from useProfileData or
  * any other source) into a single standardized EmploymentProfileSnapshot
  * that every engine module consumes.
  *
@@ -55,13 +55,4 @@ export function createEmptySnapshot() {
     preferences: null,
     percentage: null,
   };
-}
-
-/**
- * Validates that a snapshot is safe to pass to engine modules.
- * Returns the snapshot if valid, or an empty snapshot if not.
- */
-export function validateSnapshot(snapshot) {
-  if (!snapshot) return createEmptySnapshot();
-  return snapshot;
 }

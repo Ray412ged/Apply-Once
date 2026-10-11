@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { isGuest, addGuestRecord } from "@/lib/guestStorage";
 import {
   Loader2,
   Sparkles,
   Check,
   AlertTriangle,
   Star,
-  Clock,
   RotateCw,
   Search,
   Plus,
@@ -121,7 +119,7 @@ function loadCompanion(jobId) {
   try {
     const saved = sessionStorage.getItem(`workspace_companion_${jobId}`);
     if (saved) return JSON.parse(saved);
-  } catch (e) {}
+  } catch {}
   return { questions: [], currentStep: 0, copiedIds: [], lastCopiedId: null };
 }
 
@@ -130,12 +128,11 @@ function saveCompanion(jobId, companion) {
 }
 
 function SuggestionCard({ match, onCopy, copiedId, onAddToCompanion }) {
-  const { answer, matchedWords } = match;
+  const { answer } = match;
   const isCopied = copiedId === answer.id;
 
   const isPreviouslyUsed = (answer.times_used || 0) > 0;
   const isFavorite = answer.favorite;
-  const isMostRecent = false; // will be flagged by parent for top recent
 
   return (
     <div className="border border-border rounded-xl p-3 space-y-1.5">
@@ -347,11 +344,7 @@ Write the answer:`;
         ai_generated: true,
         user_confirmed: false,
       };
-      if (isGuest()) {
-        addGuestRecord("ReusableAnswer", payload);
-      } else {
-        await base44.entities.ReusableAnswer.create(payload);
-      }
+      await base44.entities.ReusableAnswer.create(payload);
       setShowSaveForm(false);
       onAnswerSaved?.();
     } catch (err) {

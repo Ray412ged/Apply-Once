@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { isGuest } from "@/lib/guestStorage";
 import { findDueFollowupLink } from "@/lib/followupCheckin";
 import EmploymentStatusCard from "@/components/dashboard/EmploymentStatusCard";
 
 // Renders the (at most one) due post-engagement follow-up check-in, or
 // nothing at all. Reuses EmploymentStatusCard entirely — no new form, no
 // new copy — this component's only job is deciding IF the prompt shows.
-// Guests are skipped (they have no ParticipantOrgLink history at all).
 export default function FollowupCheckinBanner({ profile, onUpdated, onDueChange }) {
   const [dueLink, setDueLink] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      if (isGuest() || !profile) {
+      if (!profile) {
         setLoading(false);
         onDueChange?.(false);
         return;

@@ -73,7 +73,7 @@ export default function ApplyActions({ job, apply }) {
             className="w-full h-12 font-medium"
           >
             {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-            {isApplied ? "Applied" : "Mark as Submitted"}
+            {isApplied ? "Applied" : "Mark as Applied"}
           </Button>
         </div>
       </div>

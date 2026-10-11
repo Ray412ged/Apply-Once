@@ -2,16 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { SECTION_MAP } from "@/lib/profileSections";
-import { updateProfileCompletion, getPrevSection, getNextBestStepFromCompletion, getNextIncompleteSection } from "@/lib/profileUtils";
+import { updateProfileCompletion, getPrevSection, getNextIncompleteSection } from "@/lib/profileUtils";
 import { useProfileData } from "@/hooks/useProfileData";
-import {
-  isGuest,
-  saveGuestSingle,
-  addGuestRecord,
-  updateGuestRecord,
-  deleteGuestRecord,
-  getGuestRecords,
-} from "@/lib/guestStorage";
 import GuidedForm from "@/components/GuidedForm";
 import { findDuplicate } from "@/lib/resumeDedup";
 import { logCredentialEvent, setCredentialSource } from "@/lib/credentialDebugLog";
@@ -58,12 +50,6 @@ export default function ProfileSection() {
     return null;
   }, [completion, section]);
 
-  // Engine-driven next best step label for primary action buttons
-  const nextBestStep = useMemo(
-    () => getNextBestStepFromCompletion(completion),
-    [completion]
-  );
-
   // Canonical "Continue" label — the next unresolved section in the guided
   // profile sequence (About → Job Goals → Employment → Skills → Education →
   // Licenses → References → Introduction → Review).
@@ -108,9 +94,7 @@ export default function ProfileSection() {
 
   // Save for single-record sections (UserProfile, JobPreference)
   const handleSaveSingle = async (formData) => {
-    if (isGuest()) {
-      saveGuestSingle(section.entity, { ...existingRecord, ...formData });
-    } else if (existingRecord) {
+    if (existingRecord) {
       await base44.entities[section.entity].update(existingRecord.id, formData);
     } else {
       await base44.entities[section.entity].create(formData);
@@ -122,9 +106,7 @@ export default function ProfileSection() {
   // Save fields directly to UserProfile (used by question-first sections)
   const handleSaveProfileField = async (data) => {
     const profile = completion?.profile;
-    if (isGuest()) {
-      saveGuestSingle("UserProfile", { ...(profile || {}), ...data });
-    } else if (profile) {
+    if (profile) {
       await base44.entities.UserProfile.update(profile.id, data);
     } else {
       await base44.entities.UserProfile.create(data);
@@ -136,19 +118,10 @@ export default function ProfileSection() {
   // Save for list sections (create or update)
   const handleSaveRecord = async (formData) => {
     let saved;
-    if (isGuest()) {
-      if (formData.id) {
-        updateGuestRecord(section.entity, formData.id, formData);
-        saved = formData;
-      } else {
-        saved = addGuestRecord(section.entity, formData);
-      }
+    if (formData.id) {
+      saved = await base44.entities[section.entity].update(formData.id, formData);
     } else {
-      if (formData.id) {
-        saved = await base44.entities[section.entity].update(formData.id, formData);
-      } else {
-        saved = await base44.entities[section.entity].create(formData);
-      }
+      saved = await base44.entities[section.entity].create(formData);
     }
     const updated = await updateProfileCompletion();
     checkCompletionTransition(updated);
@@ -157,29 +130,14 @@ export default function ProfileSection() {
 
   const handleSaveEducation = async (formData) => {
     let saved;
-    if (isGuest()) {
-      if (formData.id) {
-        updateGuestRecord("EducationRecord", formData.id, formData);
-        saved = formData;
-      } else {
-        const dup = findDuplicate("EducationRecord", formData, getGuestRecords("EducationRecord"));
-        if (dup) {
-          updateGuestRecord("EducationRecord", dup.id, { ...dup, ...formData });
-          saved = { ...dup, ...formData, id: dup.id };
-        } else {
-          saved = addGuestRecord("EducationRecord", formData);
-        }
-      }
+    if (formData.id) {
+      saved = await base44.entities.EducationRecord.update(formData.id, formData);
     } else {
-      if (formData.id) {
-        saved = await base44.entities.EducationRecord.update(formData.id, formData);
+      const dup = findDuplicate("EducationRecord", formData, completion?.educationRecords || []);
+      if (dup) {
+        saved = await base44.entities.EducationRecord.update(dup.id, formData);
       } else {
-        const dup = findDuplicate("EducationRecord", formData, completion?.educationRecords || []);
-        if (dup) {
-          saved = await base44.entities.EducationRecord.update(dup.id, formData);
-        } else {
-          saved = await base44.entities.EducationRecord.create(formData);
-        }
+        saved = await base44.entities.EducationRecord.create(formData);
       }
     }
     const updated = await updateProfileCompletion();
@@ -197,62 +155,34 @@ export default function ProfileSection() {
       details: `hasId=${!!formData.id} existingCount=${completion?.credentials?.length || 0}`,
     });
     let saved;
-    if (isGuest()) {
-      if (formData.id) {
-        updateGuestRecord("Credential", formData.id, formData);
-        saved = formData;
-        console.log(`[CRED-DEBUG] ${new Date().toISOString()} — guest update id="${formData.id}" name="${formData.credential_name}"`);
-        logCredentialEvent({ eventName: "Credential.update (guest)", credentialName: formData.credential_name || "", recordId: formData.id, action: "UPDATE" });
-      } else {
-        const dup = findDuplicate("Credential", formData, getGuestRecords("Credential"));
-        logCredentialEvent({
-          eventName: "Duplicate check",
-          credentialName: formData.credential_name || "",
-          recordId: dup?.id || "",
-          action: dup ? "DUPLICATE_FOUND" : "SKIP",
-          details: `dup=${dup ? "found" : "null"} checkedAgainst=${getGuestRecords("Credential").length} (guest)`,
-        });
-        if (dup) {
-          updateGuestRecord("Credential", dup.id, { ...dup, ...formData });
-          saved = { ...dup, ...formData, id: dup.id };
-          console.log(`[CRED-DEBUG] ${new Date().toISOString()} — guest dedup-update dupId="${dup.id}" name="${formData.credential_name}"`);
-          logCredentialEvent({ eventName: "Credential.update (guest dedup)", credentialName: formData.credential_name || "", recordId: dup.id, action: "DUPLICATE_FOUND" });
-        } else {
-          saved = addGuestRecord("Credential", formData);
-          console.log(`[CRED-DEBUG] ${new Date().toISOString()} — guest create id="${saved?.id}" name="${formData.credential_name}"`);
-          logCredentialEvent({ eventName: "Credential.create (guest)", credentialName: formData.credential_name || "", recordId: saved?.id || "", action: "CREATE" });
-        }
-      }
+    if (formData.id) {
+      console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.update CALL id="${formData.id}" name="${formData.credential_name}"`);
+      logCredentialEvent({ eventName: "Credential.update() called", credentialName: formData.credential_name || "", recordId: formData.id, action: "UPDATE" });
+      saved = await base44.entities.Credential.update(formData.id, formData);
+      console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.update DONE id="${formData.id}" name="${formData.credential_name}"`);
+      logCredentialEvent({ eventName: "Credential.update() done", credentialName: formData.credential_name || "", recordId: formData.id, action: "UPDATE" });
     } else {
-      if (formData.id) {
-        console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.update CALL id="${formData.id}" name="${formData.credential_name}"`);
-        logCredentialEvent({ eventName: "Credential.update() called", credentialName: formData.credential_name || "", recordId: formData.id, action: "UPDATE" });
-        saved = await base44.entities.Credential.update(formData.id, formData);
-        console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.update DONE id="${formData.id}" name="${formData.credential_name}"`);
-        logCredentialEvent({ eventName: "Credential.update() done", credentialName: formData.credential_name || "", recordId: formData.id, action: "UPDATE" });
+      const dup = findDuplicate("Credential", formData, completion?.credentials || []);
+      console.log(`[CRED-DEBUG] ${new Date().toISOString()} — findDuplicate result dup=${dup ? `"${dup.id}"` : 'null'} name="${formData.credential_name}" checkedAgainst=${completion?.credentials?.length || 0} records`);
+      logCredentialEvent({
+        eventName: "Duplicate check",
+        credentialName: formData.credential_name || "",
+        recordId: dup?.id || "",
+        action: dup ? "DUPLICATE_FOUND" : "SKIP",
+        details: `dup=${dup ? `"${dup.id}"` : "null"} checkedAgainst=${completion?.credentials?.length || 0} records`,
+      });
+      if (dup) {
+        console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.update CALL (dedup) dupId="${dup.id}" name="${formData.credential_name}"`);
+        logCredentialEvent({ eventName: "Credential.update() called (dedup)", credentialName: formData.credential_name || "", recordId: dup.id, action: "DUPLICATE_FOUND" });
+        saved = await base44.entities.Credential.update(dup.id, formData);
+        console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.update DONE (dedup) dupId="${dup.id}" name="${formData.credential_name}"`);
+        logCredentialEvent({ eventName: "Credential.update() done (dedup)", credentialName: formData.credential_name || "", recordId: dup.id, action: "UPDATE" });
       } else {
-        const dup = findDuplicate("Credential", formData, completion?.credentials || []);
-        console.log(`[CRED-DEBUG] ${new Date().toISOString()} — findDuplicate result dup=${dup ? `"${dup.id}"` : 'null'} name="${formData.credential_name}" checkedAgainst=${completion?.credentials?.length || 0} records`);
-        logCredentialEvent({
-          eventName: "Duplicate check",
-          credentialName: formData.credential_name || "",
-          recordId: dup?.id || "",
-          action: dup ? "DUPLICATE_FOUND" : "SKIP",
-          details: `dup=${dup ? `"${dup.id}"` : "null"} checkedAgainst=${completion?.credentials?.length || 0} records`,
-        });
-        if (dup) {
-          console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.update CALL (dedup) dupId="${dup.id}" name="${formData.credential_name}"`);
-          logCredentialEvent({ eventName: "Credential.update() called (dedup)", credentialName: formData.credential_name || "", recordId: dup.id, action: "DUPLICATE_FOUND" });
-          saved = await base44.entities.Credential.update(dup.id, formData);
-          console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.update DONE (dedup) dupId="${dup.id}" name="${formData.credential_name}"`);
-          logCredentialEvent({ eventName: "Credential.update() done (dedup)", credentialName: formData.credential_name || "", recordId: dup.id, action: "UPDATE" });
-        } else {
-          console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.create CALL name="${formData.credential_name}" issuer="${formData.issuing_organization}"`);
-          logCredentialEvent({ eventName: "Credential.create() called", credentialName: formData.credential_name || "", action: "CREATE" });
-          saved = await base44.entities.Credential.create(formData);
-          console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.create DONE name="${formData.credential_name}" newId="${saved?.id || 'none'}"`);
-          logCredentialEvent({ eventName: "Credential.create() done", credentialName: formData.credential_name || "", recordId: saved?.id || "", action: "CREATE" });
-        }
+        console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.create CALL name="${formData.credential_name}" issuer="${formData.issuing_organization}"`);
+        logCredentialEvent({ eventName: "Credential.create() called", credentialName: formData.credential_name || "", action: "CREATE" });
+        saved = await base44.entities.Credential.create(formData);
+        console.log(`[CRED-DEBUG] ${new Date().toISOString()} — Credential.create DONE name="${formData.credential_name}" newId="${saved?.id || 'none'}"`);
+        logCredentialEvent({ eventName: "Credential.create() done", credentialName: formData.credential_name || "", recordId: saved?.id || "", action: "CREATE" });
       }
     }
     const updated = await updateProfileCompletion();
@@ -264,29 +194,14 @@ export default function ProfileSection() {
 
   const handleSaveSkill = async (formData) => {
     let saved;
-    if (isGuest()) {
-      if (formData.id) {
-        updateGuestRecord("Skill", formData.id, formData);
-        saved = formData;
-      } else {
-        const dup = findDuplicate("Skill", formData, getGuestRecords("Skill"));
-        if (dup) {
-          updateGuestRecord("Skill", dup.id, { ...dup, ...formData });
-          saved = { ...dup, ...formData, id: dup.id };
-        } else {
-          saved = addGuestRecord("Skill", formData);
-        }
-      }
+    if (formData.id) {
+      saved = await base44.entities.Skill.update(formData.id, formData);
     } else {
-      if (formData.id) {
-        saved = await base44.entities.Skill.update(formData.id, formData);
+      const dup = findDuplicate("Skill", formData, completion?.skills || []);
+      if (dup) {
+        saved = await base44.entities.Skill.update(dup.id, formData);
       } else {
-        const dup = findDuplicate("Skill", formData, completion?.skills || []);
-        if (dup) {
-          saved = await base44.entities.Skill.update(dup.id, formData);
-        } else {
-          saved = await base44.entities.Skill.create(formData);
-        }
+        saved = await base44.entities.Skill.create(formData);
       }
     }
     const updated = await updateProfileCompletion();
@@ -295,11 +210,7 @@ export default function ProfileSection() {
   };
 
   const handleDelete = async (id) => {
-    if (isGuest()) {
-      deleteGuestRecord(section.entity, id);
-    } else {
-      await base44.entities[section.entity].delete(id);
-    }
+    await base44.entities[section.entity].delete(id);
     await updateProfileCompletion();
   };
 
@@ -310,8 +221,7 @@ export default function ProfileSection() {
   // skipped. The readiness engine's priority order is intentionally NOT used
   // here because it omits Job Goals; the canonical PROFILE_SECTIONS order is
   // the source of truth for the guided flow. When the profile reaches 100%,
-  // send the user to the Command Center (which surfaces the save-progress
-  // prompt for guests).
+  // send the user to the Command Center.
   const navigateToNext = () => {
     if (justCompletedRef.current) {
       justCompletedRef.current = false;
@@ -390,7 +300,6 @@ export default function ProfileSection() {
     return (
       <EmploymentHub
         records={records}
-        steps={section.steps}
         onSave={handleSaveRecord}
         onSaveEducation={handleSaveEducation}
         onSaveCredential={handleSaveCredential}
@@ -401,7 +310,6 @@ export default function ProfileSection() {
         onDelete={handleDelete}
         onExitNext={navigateToNext}
         onPrev={navigateToPrev}
-        onExitProfile={navigateToHome}
         title={section.title}
         nextSectionLabel={optionalNextLabel}
         profileEntryMethod={completion?.profile?.profile_entry_method || null}

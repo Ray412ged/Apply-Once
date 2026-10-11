@@ -1,17 +1,17 @@
 import React from "react";
 import { ClipboardList } from "lucide-react";
 
-const STATUS_LABELS = {
-  Interested: "Application Started",
-  Preparing: "Preparing",
-  "Ready for Review": "Ready for Review",
-  Submitted: "Applied",
-  Interview: "Interview",
-  Offer: "Offer",
-  Rejected: "Rejected",
-  Withdrawn: "Withdrawn",
-  Closed: "Closed",
-};
+const APPLIED_STATUSES = new Set([
+  "Submitted",
+  "Interview",
+  "Offer",
+  "Hired",
+  "Rejected",
+  "Not Selected",
+  "Withdrawn",
+  "Closed",
+  "Closed - No Response",
+]);
 
 function SummaryRow({ label, value, valueClass = "text-foreground" }) {
   return (
@@ -26,7 +26,7 @@ export default function ApplicationSummary({ job, application, readiness, reusab
   const startDate = application?.application_started_date || application?.created_date;
   const hasResume = readiness.sections.resume === "ready";
   const hasCoverLetter = readiness.sections.coverLetter === "ready";
-  const statusLabel = STATUS_LABELS[application?.status] || "Application Started";
+  const statusLabel = APPLIED_STATUSES.has(application?.status) ? "Applied" : "In Progress";
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 space-y-1">

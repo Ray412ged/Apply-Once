@@ -14,19 +14,15 @@ import { getOrCreateSavedJob, removeSavedJob } from "@/lib/savedJobs";
 import { getOrCreateApplication } from "@/lib/applications";
 import { getMyOpportunities } from "@/lib/orgJobs";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
-import { isGuest } from "@/lib/guestStorage";
-import { GuestJobGateProvider, useGuestJobGate } from "@/components/jobs/GuestJobGateContext";
 import JobCard from "@/components/JobCard";
 import DiscoveryView from "@/components/jobs/DiscoveryView";
 import JobFilters from "@/components/jobs/JobFilters";
-import { Search, SlidersHorizontal, Bookmark, Briefcase, Store } from "lucide-react";
+import { Search, SlidersHorizontal, Bookmark, Briefcase } from "lucide-react";
 import { JobListSkeleton } from "@/components/Skeleton";
 import { Button } from "@/components/ui/button";
 
 function JobsContent() {
   const navigate = useNavigate();
-  const guest = isGuest();
-  const { requireAccount } = useGuestJobGate();
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState([]);
   const { data: savedJobs = [] } = useSavedJobs();
@@ -37,32 +33,27 @@ function JobsContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState("bestMatch");
   const [activeTab, setActiveTab] = useState("all");
-  const [actionLoading, setActionLoading] = useState({});
+  const [, setActionLoading] = useState({});
   const [view, setView] = useState(() => {
     try { return sessionStorage.getItem("jobs_selected_view") || "discovery"; }
-    catch (_) { return "discovery"; }
+    catch { return "discovery"; }
   });
   const handleViewChange = (newView) => {
     setView(newView);
-    try { sessionStorage.setItem("jobs_selected_view", newView); } catch (_) {}
+    try { sessionStorage.setItem("jobs_selected_view", newView); } catch {}
   };
 
-  // Curated Apply Once job database — the single source for All Jobs, Local,
-  // and Saved. All job listings come from Apply Once's own JobPosting records.
+  // One curated Jobs board with no participant-facing source split.
   useEffect(() => {
     async function loadData() {
       try {
         const [jobsData, hiddenData, passData] = await Promise.all([
           getMyOpportunities(),
-          guest
-            ? Promise.resolve([])
-            : base44.entities.HiddenJob.filter({}, "-created_date", 500),
-          guest
-            ? Promise.resolve([])
-            : base44.entities.JobSwipeAction.filter({ action: "pass" }, "-created_date", 200),
+          base44.entities.HiddenJob.filter({}, "-created_date", 500),
+          base44.entities.JobSwipeAction.filter({ action: "pass" }, "-created_date", 200),
         ]);
 
-        if (!guest && hiddenData.length > 0) {
+        if (hiddenData.length > 0) {
           await migrateHiddenJobsToPassActions(hiddenData);
         }
 
@@ -81,7 +72,7 @@ function JobsContent() {
   const passIds = useMemo(() => new Set(passActions.map((p) => p.job_posting_id)), [passActions]);
   const savedIds = useMemo(() => new Set(savedJobs.map((s) => s.job_posting_id)), [savedJobs]);
 
-  // One canonical match-score call per job — guest-aware, reuses profileData
+  // One canonical match-score call per job, reusing profileData
   // already loaded by useProfileData().
   const getMatchResult = (job) =>
     computeMatchScore(job, {
@@ -100,14 +91,6 @@ function JobsContent() {
 
   const handleDismiss = useCallback(
     async (job) => {
-      if (guest) {
-        setPassActions((prev) =>
-          prev.some((p) => p.job_posting_id === job.id)
-            ? prev
-            : [...prev, { job_posting_id: job.id, action: "pass" }]
-        );
-        return { recordId: null, previousAction: null };
-      }
       const existing = passActions.find((p) => p.job_posting_id === job.id);
       const previousAction = existing?.action ?? null;
       setActionLoading((p) => ({ ...p, [job.id]: true }));
@@ -125,15 +108,11 @@ function JobsContent() {
         setActionLoading((p) => ({ ...p, [job.id]: false }));
       }
     },
-    [guest, passActions]
+    [passActions]
   );
 
   const handleUndoDismiss = useCallback(
-    async ({ job, recordId, previousAction }) => {
-      if (guest) {
-        setPassActions((prev) => prev.filter((p) => p.job_posting_id !== job.id));
-        return;
-      }
+    async ({ recordId, previousAction }) => {
       try {
         if (previousAction === null && recordId) {
           await base44.entities.JobSwipeAction.delete(recordId);
@@ -148,11 +127,10 @@ function JobsContent() {
         console.error("Failed to undo dismiss:", err);
       }
     },
-    [guest]
+    []
   );
 
   const handleToggleSave = async (jobId) => {
-    if (requireAccount(`/jobs/${jobId}`)) return;
     setActionLoading((p) => ({ ...p, [jobId]: true }));
     try {
       if (savedIds.has(jobId)) {
@@ -168,7 +146,6 @@ function JobsContent() {
   };
 
   const handleSaveJob = async (job) => {
-    if (requireAccount(`/jobs/${job.id}`)) return false;
     try {
       await getOrCreateSavedJob(job.id);
       return true;
@@ -179,7 +156,6 @@ function JobsContent() {
   };
 
   const handleApply = async (job) => {
-    if (requireAccount(`/jobs/${job.id}`)) return;
     try {
       await getOrCreateApplication(job.id);
       navigate(`/workspace/${job.id}`);
@@ -190,8 +166,8 @@ function JobsContent() {
 
   // === One canonical filtered collection (shared by both views) ===
   // Curated jobs only. Pipeline: exclude dismissed → search term → active
-  // filters → tab partition (All / Local / Saved). Switching between
-  // Discovery and List never changes the eligible job set.
+  // filters → optional Saved view. Switching between Discovery and List
+  // never changes the eligible job set.
   const filteredJobs = useMemo(
     () =>
       getFilteredJobs({
@@ -239,7 +215,7 @@ function JobsContent() {
     return (
       <div className="py-6 space-y-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Jobs</h1>
+          <h1 className="text-2xl font-bold text-foreground">Opportunities</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Loading available jobs...</p>
         </div>
         <JobListSkeleton />
@@ -250,13 +226,11 @@ function JobsContent() {
   const getEmptyMessage = () => {
     if (activeTab === "saved") return "No saved jobs yet. Tap the bookmark on any listing to save it for later.";
     if (searchQuery) return "No jobs match that search. Try different keywords.";
-    if (activeTab === "local") return "No local jobs available right now. Check back soon.";
-    return "No jobs available right now. Check back soon.";
+    return "No jobs are available right now. Check back soon.";
   };
 
   const tabs = [
-    { value: "all", label: "All Jobs", icon: Briefcase },
-    { value: "local", label: "Local", icon: Store },
+    { value: "all", label: "Jobs", icon: Briefcase },
     { value: "saved", label: "Saved", icon: Bookmark },
   ];
 
@@ -268,19 +242,6 @@ function JobsContent() {
           {displayedJobs.length} {displayedJobs.length === 1 ? "job" : "jobs"} available
         </p>
       </div>
-
-      {/* Guest preview banner */}
-      {guest && (
-        <div className="bg-accent/50 border border-primary/15 rounded-xl px-4 py-2.5 flex items-center gap-2">
-          <Briefcase className="w-4 h-4 text-primary flex-shrink-0" />
-          <p className="text-xs text-foreground flex-1">
-            Your job matches are based on the profile you just completed.{" "}
-            <span className="text-muted-foreground">
-              Create an account when you're ready to save jobs or begin an application.
-            </span>
-          </p>
-        </div>
-      )}
 
       {/* View selector */}
       <div className="flex gap-2">
@@ -306,7 +267,7 @@ function JobsContent() {
         </button>
       </div>
 
-      {/* Job source tabs are available in both Discovery and List views. */}
+      {/* One Jobs board with a Saved view; sources stay invisible to participants. */}
       <div className="flex gap-2 flex-wrap">
         {tabs.map((t) => {
           const Icon = t.icon;
@@ -342,7 +303,6 @@ function JobsContent() {
           onApply={handleApply}
           preferences={preferences}
           profileData={profileData}
-          savedIds={savedIds}
         />
       ) : (
         <div className="space-y-4">
@@ -447,9 +407,5 @@ function JobsContent() {
 }
 
 export default function Jobs() {
-  return (
-    <GuestJobGateProvider>
-      <JobsContent />
-    </GuestJobGateProvider>
-  );
+  return <JobsContent />;
 }

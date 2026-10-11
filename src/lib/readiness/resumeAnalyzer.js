@@ -31,9 +31,7 @@ export function analyzeResume(snapshot) {
   const {
     profile,
     employmentHistory = [],
-    education = [],
     skills = [],
-    certifications = [],
     documents = [],
   } = snapshot;
 

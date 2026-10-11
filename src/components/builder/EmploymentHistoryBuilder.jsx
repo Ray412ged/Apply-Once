@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
-import { isGuest, isLocalProfile, addGuestRecord, saveGuestSingle } from "@/lib/guestStorage";
 import { setProfileEntryMethod } from "@/lib/profileEntryMethod";
 import { useProfileData } from "@/hooks/useProfileData";
 import { Button } from "@/components/ui/button";
@@ -53,7 +52,6 @@ export default function EmploymentHistoryBuilder({
   hideAddAnother = false,
 }) {
   const navigate = useNavigate();
-  const guest = isLocalProfile();
   const embedded = onSaveRecord !== null;
   const { data: profileData } = useProfileData();
   const locationBias = buildLocationBias(profileData?.profile);
@@ -163,11 +161,7 @@ export default function EmploymentHistoryBuilder({
         }
       } else {
         const record = { ...formData };
-        if (guest) {
-          addGuestRecord("EmploymentRecord", record);
-        } else {
-          await base44.entities.EmploymentRecord.create(record);
-        }
+        await base44.entities.EmploymentRecord.create(record);
         setProfileEntryMethod("manual");
         setSavedCount((c) => c + 1);
         try { sessionStorage.removeItem(BUILDER_STORAGE_KEY); } catch {}
@@ -189,19 +183,15 @@ export default function EmploymentHistoryBuilder({
     // After the onboarding builder, continue to the next section in the
     // guided flow (Skills) rather than dumping the user at the Profile
     // overview or Home. This keeps onboarding a single continuous journey.
-    if (guest) {
-      saveGuestSingle("UserProfile", { onboarding_status: "in_progress" });
-    } else {
-      try {
-        const profiles = await base44.entities.UserProfile.filter({}, "-created_date", 1);
-        if (profiles.length > 0) {
-          await base44.entities.UserProfile.update(profiles[0].id, {
-            onboarding_status: "in_progress",
-          });
-        }
-      } catch (err) {
-        // Non-critical — continue to next section
+    try {
+      const profiles = await base44.entities.UserProfile.filter({}, "-created_date", 1);
+      if (profiles.length > 0) {
+        await base44.entities.UserProfile.update(profiles[0].id, {
+          onboarding_status: "in_progress",
+        });
       }
+    } catch (err) {
+      // Non-critical — continue to next section
     }
     navigate("/profile/edit?section=skills");
   };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useOutletContext, useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
   Loader2,
@@ -11,10 +11,11 @@ import {
   FileBarChart,
   Briefcase,
   CalendarClock,
-  Gauge,
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import DashboardStatTile from "@/components/dashboard/DashboardStatTile";
+import OrgParticipantIntakePanel from "@/components/organization/OrgParticipantIntakePanel";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Organizational Dashboard — read-only, aggregate-and-status view for org
 // staff. Answers exactly one question: which participants need attention
@@ -30,12 +31,24 @@ const STATUS_COLORS = {
   Employed: "hsl(215 16% 55%)",
 };
 
+function MiniStat({ label, value }) {
+  return (
+    <div className="rounded-xl bg-muted/40 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm font-semibold text-foreground mt-1">{value}</p>
+    </div>
+  );
+}
+
 export default function OrgDashboard() {
   const { slug } = useParams();
+  const { session } = useOutletContext();
   const [org, setOrg] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [participantDetail, setParticipantDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -44,7 +57,7 @@ export default function OrgDashboard() {
         setError(null);
         const orgs = await base44.entities.Organization.filter({ slug }, "-created_date", 1);
         if (orgs.length === 0) {
-          setError("No organization found for this link.");
+          setError("Auberle Employment Institute workspace unavailable.");
           return;
         }
         setOrg(orgs[0]);
@@ -86,17 +99,26 @@ export default function OrgDashboard() {
   }
 
   const brandColor = org?.primary_color || undefined;
-  const orgName = org?.display_name || org?.name;
-
   const statusOrder = ["Needs Encouragement", "Building Profile", "Ready to Apply", "Employed"];
   const grouped = statusOrder.map((status) => ({
     status,
     participants: (data?.participants || []).filter((p) => p.status === status),
   }));
-  const chartData = statusOrder.map((status) => ({
-    status,
-    count: data?.by_status?.[status] ?? 0,
-  }));
+  async function openParticipant(participantId) {
+    if (session?.org_role !== "org_admin") return;
+    setDetailLoading(true);
+    setError(null);
+    try {
+      const res = await base44.functions.invoke("getOrgParticipantDetail", { participant_id: participantId });
+      const payload = res?.data || res;
+      if (payload?.error) throw new Error(payload.error);
+      setParticipantDetail(payload);
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || "Could not load participant activity.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
 
   const momentumBadge = (m) => {
     if (m === "Building Momentum")
@@ -120,6 +142,8 @@ export default function OrgDashboard() {
 
   return (
       <main className="p-5 max-w-2xl mx-auto space-y-6">
+        {session?.org_role === "org_admin" && <OrgParticipantIntakePanel />}
+
         <div className="grid grid-cols-2 gap-3">
           <DashboardStatTile icon={Users} label="Active participants" value={data?.total_active_participants ?? 0} accent="primary" accentColor={brandColor} />
           <DashboardStatTile icon={Briefcase} label="Employed" value={data?.by_status?.Employed ?? 0} accent="success" />
@@ -127,34 +151,8 @@ export default function OrgDashboard() {
           <DashboardStatTile icon={CalendarClock} label="Inactive 14+ days" value={data?.inactive_14_plus_days ?? 0} accent="warning" />
         </div>
 
-        <DashboardStatTile
-          icon={Gauge}
-          label="Average profile completion across active participants"
-          value={`${data?.average_profile_completion_pct ?? 0}%`}
-          accent="primary"
-          accentColor={brandColor}
-        />
-
-        {/* At-a-glance status breakdown */}
-        <div className="bg-card rounded-2xl border border-border p-4">
-          <h2 className="font-semibold text-foreground mb-3">Status at a glance</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 16 }}>
-              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="status" width={130} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ borderRadius: 12, fontSize: 12 }} />
-              <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={22}>
-                {chartData.map((entry) => (
-                  <Cell key={entry.status} fill={STATUS_COLORS[entry.status]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Which participants need attention today */}
         <div className="space-y-4">
-          <h2 className="font-semibold text-foreground">Who needs your attention today</h2>
+          <h2 className="font-semibold text-foreground">Participants</h2>
           {grouped.map(({ status, participants }) => (
             <div key={status} className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -168,7 +166,12 @@ export default function OrgDashboard() {
                 <ul className="divide-y divide-border">
                   {participants.map((p) => (
                     <li key={p.participant_id} className="py-2.5 flex items-center justify-between gap-2">
-                      <span className="text-sm text-foreground">
+                      <button
+                        type="button"
+                        className={`text-left text-sm text-foreground ${session?.org_role === "org_admin" ? "hover:text-primary hover:underline" : ""}`}
+                        onClick={() => openParticipant(p.participant_id)}
+                        disabled={session?.org_role !== "org_admin" || detailLoading}
+                      >
                         {p.participant_name}
                         {status === "Employed" && p.employer_name && (
                           <span className="text-muted-foreground">
@@ -177,7 +180,7 @@ export default function OrgDashboard() {
                             {p.employer_name}
                           </span>
                         )}
-                      </span>
+                      </button>
                       {status !== "Employed" && momentumBadge(p.momentum)}
                     </li>
                   ))}
@@ -187,38 +190,56 @@ export default function OrgDashboard() {
           ))}
         </div>
 
-        {/* Program-level interests — aggregate only, never per-participant */}
-        {(data?.program_career_interests?.length > 0 || data?.program_industry_interests?.length > 0) && (
-          <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
-            <h2 className="font-semibold text-foreground flex items-center gap-2">
-              <Users className="w-4 h-4" /> Program-level interests
-            </h2>
-            {data?.program_career_interests?.length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Most common career interests</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {data.program_career_interests.map((c) => (
-                    <span key={c.label} className="text-xs bg-accent text-accent-foreground px-2.5 py-1 rounded-full">
-                      {c.label} ({c.count})
-                    </span>
-                  ))}
+        {participantDetail && (
+          <Dialog open={!!participantDetail} onOpenChange={(v) => !v && setParticipantDetail(null)}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Participant Activity</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="rounded-xl bg-muted/40 p-4">
+                  <p className="font-semibold text-foreground">{participantDetail.participant?.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {participantDetail.participant?.email}
+                    {participantDetail.participant?.phone ? ` · ${participantDetail.participant.phone}` : ""}
+                  </p>
+                  {participantDetail.participant?.referring_staff && (
+                    <p className="text-xs text-muted-foreground mt-1">Referred by {participantDetail.participant.referring_staff}</p>
+                  )}
                 </div>
-              </div>
-            )}
-            {data?.program_industry_interests?.length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Most common industries</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {data.program_industry_interests.map((c) => (
-                    <span key={c.label} className="text-xs bg-accent text-accent-foreground px-2.5 py-1 rounded-full">
-                      {c.label} ({c.count})
-                    </span>
-                  ))}
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <MiniStat label="Profile" value={`${participantDetail.participant?.profile_completion_percentage || 0}%`} />
+                  <MiniStat label="Resume" value={participantDetail.participant?.resume_ready ? "Ready" : "Not ready"} />
+                  <MiniStat label="Applications" value={participantDetail.applications?.length || 0} />
+                  <MiniStat label="Status" value={participantDetail.participant?.employment_status || "Searching"} />
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Last active: {participantDetail.participant?.last_activity_at
+                    ? new Date(participantDetail.participant.last_activity_at).toLocaleString()
+                    : "No activity yet"}
+                </p>
+
+                <div>
+                  <h3 className="font-semibold text-foreground mb-2">Applications</h3>
+                  {participantDetail.applications?.length ? (
+                    <div className="space-y-2">
+                      {participantDetail.applications.slice(0, 20).map((app) => (
+                        <div key={app.id} className="rounded-xl border border-border p-3">
+                          <p className="text-sm font-medium text-foreground">{app.job_title || "Job application"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {[app.employer_name, app.status].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-muted-foreground">No applications yet.</p>}
+                </div>
+
+                <Button className="w-full" onClick={() => setParticipantDetail(null)}>Close</Button>
               </div>
-            )}
-          </div>
+            </DialogContent>
+          </Dialog>
         )}
+
       </main>
   );
 }

@@ -17,7 +17,7 @@ describe("Match score threshold — verifies MatchBadge's Review-Needed fallback
     expect(result.level).toBe("Review Needed");
   });
 
-  it("returns a real, non-zero score for a populated (guest-plausible) profile", () => {
+  it("returns a real, non-zero score for a populated participant profile", () => {
     const result = computeMatchScore(job, {
       profile: { state: "PA" },
       education: [{ degree_or_credential: "High School Diploma" }],

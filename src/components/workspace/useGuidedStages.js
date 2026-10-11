@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
  * Guided-stage persistence for the Application Workspace.
  *
  * Each job keeps its own checklist of guided stages in sessionStorage so the
- * user's progress is private to the current device session (guest-privacy
+ * user's in-progress workspace state is private to the current device session
  * behavior) and never collides with progress for a different job.
  *
  * The hook loads the correct state for the current job, persists every change,

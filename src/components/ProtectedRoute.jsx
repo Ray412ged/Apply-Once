@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
-import { isGuest } from '@/lib/guestStorage';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 const DefaultFallback = () => (
@@ -30,7 +29,7 @@ export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthe
     return unauthenticatedElement;
   }
 
-  if (!isAuthenticated && !isGuest()) {
+  if (!isAuthenticated) {
     return unauthenticatedElement;
   }
 

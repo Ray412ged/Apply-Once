@@ -10,7 +10,6 @@ export const FILTER_DEFAULTS = {
   educationRequired: "",
   postedWithin: "",
   company: "",
-  localOnly: false,
 };
 
 export const POSTED_WITHIN_OPTIONS = [
@@ -86,7 +85,6 @@ export function applyFilters(jobs, filters) {
       const keywordMatch = job.keywords?.some((k) => k.toLowerCase().includes(occ));
       if (!titleMatch && !keywordMatch) return false;
     }
-    if (filters.localOnly && !job.local_job) return false;
     return true;
   });
 }
@@ -101,20 +99,14 @@ export function getUniqueCompanies(jobs) {
   return Array.from(set).sort();
 }
 
-export function isRemoteJob(job) {
-  return job?.remote_type === "Remote";
-}
-
 /**
  * One canonical filter pipeline consumed by BOTH the Discovery and List
  * views. Switching views must never change the eligible job set.
  *
  * Pipeline: exclude dismissed → search term → active filters → tab partition.
  *
- * The default Jobs experience draws exclusively from Apply Once's curated
- * JobPosting records. The "Local" tab shows curated jobs where
- * `local_job === true`; "Saved" shows the user's saved jobs; "All Jobs"
- * shows every curated active record.
+ * The participant experience is one curated Jobs board.
+ * "Saved" is simply a personal view of that same board.
  */
 export function getFilteredJobs({
   jobs,
@@ -144,9 +136,7 @@ export function getFilteredJobs({
 
   let result = runCommonPipeline(jobs);
 
-  if (activeTab === "local") {
-    result = result.filter((j) => j.local_job === true);
-  } else if (activeTab === "saved") {
+  if (activeTab === "saved") {
     result = result.filter((j) => savedSet.has(j.id));
   }
 

@@ -45,32 +45,3 @@ export async function removeSavedJob(jobPostingId) {
   }
   return null;
 }
-
-// One-time migration: for each JobSwipeAction with action "save" that has no
-// corresponding SavedJob record, create one. This preserves existing user data
-// when upgrading from the old dual-system to SavedJob as the single source.
-//
-// Returns the count of newly created SavedJob records.
-export async function migrateSwipeSavesToSavedJobs(swipeActions) {
-  if (!swipeActions || swipeActions.length === 0) return 0;
-
-  const saveActions = swipeActions.filter((r) => r.action === "save");
-  if (saveActions.length === 0) return 0;
-
-  // Load all existing SavedJob records to avoid duplicates
-  const existingSaved = await base44.entities.SavedJob.filter({}, "-created_date", 500);
-  const existingIds = new Set(existingSaved.map((s) => s.job_posting_id));
-
-  const toCreate = saveActions
-    .filter((r) => !existingIds.has(r.job_posting_id))
-    .map((r) => ({
-      job_posting_id: r.job_posting_id,
-      saved_date: r.created_date || new Date().toISOString(),
-    }));
-
-  if (toCreate.length === 0) return 0;
-
-  await base44.entities.SavedJob.bulkCreate(toCreate);
-  invalidateSavedJobsCache();
-  return toCreate.length;
-}

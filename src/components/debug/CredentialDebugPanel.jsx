@@ -19,7 +19,6 @@ const ORIGIN_COLORS = {
   "Resume Upload": "text-primary",
   "Accept All": "text-success",
   "Individual Accept": "text-success",
-  "Guest Migration": "text-warning",
   "Manual Profile Edit": "text-muted-foreground",
   "Profile Refresh": "text-warning",
 };

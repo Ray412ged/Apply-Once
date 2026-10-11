@@ -1,28 +1,77 @@
-# Apply Once
+# Base44 Project
 
-Private source mirror of the current Base44 **Apply Once** application for independent technical review.
+Use this repository to run and edit the app locally, then publish changes back through Base44.
 
-## Current product direction
+Any change pushed to the repo will also be reflected in the Base44 Builder.
 
-The current development target is **Apply Once Organization Edition v0.1**: an organization-owned employment network connecting employer relationships and curated opportunities to adult job seekers age 18+.
+## Prerequisites
 
-The current Base44 checkpoint represented here is:
+1. Clone the repository using the project's Git URL.
+2. Navigate to the project directory.
+3. Install dependencies: `npm install`.
+4. Install the Base44 CLI: `npm install -g base44@latest`.
 
-**AO Organization Edition v0.1 — Phase 1 Foundations**
+See the [Base44 CLI docs](https://docs.base44.com/developers/references/cli/get-started/overview) if you want to run Base44 commands directly.
 
-Phase 1 establishes:
-- organization staff roles
-- organization authorization resolved server-side
-- organization-scoped job visibility
-- secure job reads through backend functions
-- the Organization Edition workspace shell
+## Run Locally
 
-## Review order
+Run the full local development environment from the project root:
 
-1. Read `docs/OPERATING_BLUEPRINT_v1.2.md`
-2. Read `docs/BUILD_PLAN_v0.1.md`
-3. Read `ARCHITECTURE.md`
-4. Read `CLAUDE_REVIEW.md`
-5. Review the code, especially `base44/shared/orgAuth.ts`, `base44/functions/getMyOpportunities/`, `base44/functions/getJobForMe/`, entity RLS, and organization routes.
+```bash
+base44 dev
+```
 
-This repository is intended for review first. Do not make changes unless Raymond explicitly asks for implementation.
+`base44 dev` starts the local Base44 development backend and, when this app is configured for it, also starts the frontend dev server for you. Use the frontend URL printed by the command.
+
+For example, when the Base44 project config includes a `serveCommand`, `base44 dev` can launch the frontend too:
+
+```json5
+{
+  "site": {
+    "serveCommand": "npm run dev"
+  }
+}
+```
+
+In a Base44 project this lives in `base44/config.jsonc`.
+
+## Run Only The Frontend
+
+If you only want to work on the frontend against the hosted Base44 backend, run:
+
+```bash
+npm run dev
+```
+
+Open the local URL printed by Vite.
+
+## Use The Hosted Backend
+
+For frontend-only development, create or update `.env.local` in the project root:
+
+```bash
+VITE_BASE44_APP_ID=your_app_id
+VITE_BASE44_APP_BASE_URL=https://your-app.base44.app
+```
+
+`VITE_BASE44_APP_ID` identifies the Base44 app.
+
+`VITE_BASE44_APP_BASE_URL` tells the Base44 Vite plugin where to send local `/api` requests. Point it at your deployed Base44 app URL when you want the local frontend to use the hosted backend.
+
+When you use `base44 dev`, the command injects the local Base44 values for you, so `.env.local` is mainly needed for frontend-only workflows.
+
+## Publish Your Changes
+
+After pushing your changes to git, open the Base44 dashboard and publish the app:
+
+```bash
+base44 dashboard open
+```
+
+## Docs & Support
+
+Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+
+Base44 CLI command reference: [https://docs.base44.com/developers/references/cli/commands/introduction](https://docs.base44.com/developers/references/cli/commands/introduction)
+
+Support: [https://app.base44.com/support](https://app.base44.com/support)

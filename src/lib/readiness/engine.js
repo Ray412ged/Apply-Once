@@ -43,13 +43,13 @@
  */
 
 import { analyzeReadiness } from "@/lib/readinessScanner";
-import { DEFAULT_READINESS_WEIGHTS, JOB_MATCH_THRESHOLDS, validateWeights } from "./weights";
+import { validateWeights } from "./weights";
 import { identifyTransferableSkills, mergeSkills } from "./transferableSkills";
 import { buildProfileSnapshot } from "./profileSnapshot";
 import { analyzeResume } from "./resumeAnalyzer";
-import { matchJobs, computeMatchScore } from "./jobMatcher";
+import { matchJobs } from "./jobMatcher";
 import { generateRecommendations as _generateRecommendations } from "./recommendations";
-import { getProgressHistory, recordProgressEntry } from "./progressHistory";
+import { getProgressHistory } from "./progressHistory";
 import { calculateSubScores, calculateProfileCompletion } from "./subScores";
 import { evaluateSections } from "./sectionStatuses";
 import { buildImproveNextRecommendations } from "./improveNext";

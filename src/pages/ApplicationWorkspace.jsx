@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useProfileData } from "@/hooks/useProfileData";
-import { analyzeJobReadiness, computeApplicationProgress } from "@/lib/readiness/engine";
-import { isGuest, getGuestRecords } from "@/lib/guestStorage";
+import { analyzeJobReadiness } from "@/lib/readiness/engine";
 import { detectAtsType, requiresEmployerAccount } from "@/lib/atsDetection";
 import { computeMatchScore } from "@/lib/matching";
 import { Button } from "@/components/ui/button";
@@ -53,7 +52,6 @@ export default function ApplicationWorkspace() {
   const [selectedResumeId, setSelectedResumeId] = useState(null);
   const [coverLetterViewedSig, setCoverLetterViewedSig] = useState("");
   const [notes, setNotes] = useState("");
-  const [employerOpened, setEmployerOpened] = useState(false);
   const [openNextCounter, setOpenNextCounter] = useState(0);
 
   const loadedRef = useRef(false);
@@ -75,18 +73,14 @@ export default function ApplicationWorkspace() {
         const jobData = await getJobForMe(id);
         setJob(jobData);
 
-        if (isGuest()) {
-          setReusableAnswers(getGuestRecords("ReusableAnswer"));
-        } else {
-          try {
-            const answerRecords = await base44.entities.ReusableAnswer.list("-created_date", 50);
-            setReusableAnswers(answerRecords);
-          } catch (err) {
-            console.error("Failed to load reusable answers:", err);
-          }
+        try {
+          const answerRecords = await base44.entities.ReusableAnswer.list("-created_date", 50);
+          setReusableAnswers(answerRecords);
+        } catch (err) {
+          console.error("Failed to load reusable answers:", err);
         }
 
-        if (!isGuest()) {
+        {
           const apps = await base44.entities.Application.filter({ job_posting_id: id }, "-created_date", 1);
           let app = apps[0];
           if (!app) {
@@ -119,7 +113,6 @@ export default function ApplicationWorkspace() {
           if (app.notes) setNotes(app.notes);
         }
 
-        setEmployerOpened(sessionStorage.getItem(`workspace_employer_opened_${id}`) === "true");
       } catch (err) {
         console.error("Failed to load workspace data:", err);
       } finally {
@@ -137,13 +130,12 @@ export default function ApplicationWorkspace() {
   }, [job, profileData]);
 
   // === Application package: live resume + job-tailored cover letter ===
-  const guest = isGuest();
   const resume = useMemo(
     () => (profileData?.profile ? generateResume(profileData) : null),
     [profileData]
   );
   const resumeStatus = resume
-    ? getResumeStatus(resume, null, guest, profileData?.profile?.last_resume_signature)
+    ? getResumeStatus(resume, null, profileData?.profile?.last_resume_signature)
     : "not_ready";
 
   // Records a resume_generated activity event the first time a real,
@@ -186,14 +178,9 @@ export default function ApplicationWorkspace() {
 
   const handleEmployerOpened = useCallback(() => {
     sessionStorage.setItem(`workspace_employer_opened_${id}`, "true");
-    setEmployerOpened(true);
   }, [id]);
 
   const refreshReusableAnswers = useCallback(async () => {
-    if (isGuest()) {
-      setReusableAnswers(getGuestRecords("ReusableAnswer"));
-      return;
-    }
     try {
       const answerRecords = await base44.entities.ReusableAnswer.list("-created_date", 50);
       setReusableAnswers(answerRecords);
@@ -220,7 +207,7 @@ export default function ApplicationWorkspace() {
 
   // === Auto-save workspace state to the Application record ===
   useEffect(() => {
-    if (!loadedRef.current || !application || !readiness || isGuest()) return;
+    if (!loadedRef.current || !application || !readiness) return;
     const answerableMissing = readiness.missing.filter((m) => m.type !== "link");
     const unansweredCount = answerableMissing.filter((m) => answers[m.id] === undefined || answers[m.id] === "").length;
     const hasAnswers = Object.keys(answers).length > 0;
@@ -254,8 +241,6 @@ export default function ApplicationWorkspace() {
   const matchResult = job
     ? computeMatchScore(job, { profile, education, employment, skills, credentials, preferences })
     : null;
-  const progress = readiness ? computeApplicationProgress(readiness, application, employerOpened) : null;
-
   const answerableMissing = readiness?.missing.filter((m) => m.type !== "link") || [];
   const unansweredCount = answerableMissing.filter((m) => answers[m.id] === undefined || answers[m.id] === "").length;
 
@@ -351,7 +336,6 @@ export default function ApplicationWorkspace() {
         job={job}
         application={application}
         reusableAnswers={reusableAnswers}
-        progress={progress}
       />
 
       <ApplicationPackageCard

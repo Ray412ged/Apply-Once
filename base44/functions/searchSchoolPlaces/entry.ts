@@ -1,8 +1,22 @@
-// Public school search endpoint — no auth required so guest users can search.
-// Uses Google Places Autocomplete to find schools, universities, and training programs.
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+// School search is available only to authenticated Apply Once users.
+// Guest/public participant access was removed, so Google Places requests
+// should not be exposed through an unauthenticated application endpoint.
 
 Deno.serve(async (req) => {
   try {
+    const base44 = createClientFromRequest(req);
+    let user = null;
+    try {
+      user = await base44.auth.me();
+    } catch (_) {
+      // Treat an invalid or missing session as unauthenticated.
+    }
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
     if (!apiKey) {
       return Response.json({

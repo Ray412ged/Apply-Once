@@ -15,25 +15,42 @@ export default async function(req) {
 
     if (orgContext) {
       organizationId = orgContext.organizationId;
-      // Organization users only receive their own org's verified active opportunities.
-      jobs = await svc.entities.JobPosting.filter(
-        {
-          status: "Active",
-          organization_id: organizationId,
-          verification_status: "Verified",
-        },
-        "-created_date",
-        500
-      );
+
+      // One participant-facing Jobs board:
+      // 1) opportunities published by this organization, plus
+      // 2) local jobs added by Apply Once to strengthen the board when needed.
+      const [organizationJobs, sharedLocalJobs] = await Promise.all([
+        svc.entities.JobPosting.filter(
+          {
+            status: "Active",
+            organization_id: organizationId,
+            verification_status: "Verified",
+          },
+          "-created_date",
+          500
+        ),
+        svc.entities.JobPosting.filter(
+          {
+            status: "Active",
+            local_job: true,
+            administrator_verified: true,
+          },
+          "-created_date",
+          500
+        ),
+      ]);
+
+      const seen = new Set();
+      jobs = [...organizationJobs, ...sharedLocalJobs].filter((job) => {
+        if (job.organization_id && job.organization_id !== organizationId) return false;
+        if (seen.has(job.id)) return false;
+        seen.add(job.id);
+        return true;
+      });
     } else {
-      // Independent AO users retain the existing public feed. Organization
-      // postings are removed from the result set and never mixed into it.
-      const publicCandidates = await svc.entities.JobPosting.filter(
-        { status: "Active" },
-        "-created_date",
-        500
-      );
-      jobs = publicCandidates.filter((job) => !job.organization_id);
+      // This deployment is organization-led; participants join through an
+      // organization invitation before seeing the Jobs board.
+      jobs = [];
     }
 
     const today = new Date();

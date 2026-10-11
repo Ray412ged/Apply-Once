@@ -47,21 +47,6 @@ export const READINESS_CONFIDENCE = {
   LOW: "Low",
 };
 
-// ─── Sub-score category keys (must match weights.js keys) ─────────────────
-
-export const SUB_SCORE_KEYS = [
-  "contact",
-  "summary",
-  "employment",
-  "education",
-  "skills",
-  "resume",
-  "references",
-  "credentials",
-  "profile",
-  "questions",
-];
-
 // ─── Score → status helpers ───────────────────────────────────────────────
 
 /** Maps a 0–100 sub-score to a status band. */

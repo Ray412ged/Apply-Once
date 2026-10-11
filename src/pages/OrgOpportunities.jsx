@@ -7,21 +7,26 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { orgOpportunitiesApi } from "@/lib/orgOpportunities";
 import { orgEmployersApi } from "@/lib/orgEmployers";
-
-const VERIFICATION_CLASS = {
-  Verified: "bg-success/10 text-success",
-  Unverified: "bg-warning/10 text-warning",
-  Returned: "bg-accent text-accent-foreground",
-  Rejected: "bg-destructive/10 text-destructive",
-};
+import ImportEmployerOpportunityDialog from "@/components/organization/ImportEmployerOpportunityDialog";
 
 const STATUS_CLASS = {
-  Active: "bg-success/10 text-success",
+  Published: "bg-success/10 text-success",
+  "Needs Review": "bg-warning/10 text-warning",
   Draft: "bg-muted text-muted-foreground",
+  Returned: "bg-accent text-accent-foreground",
+  Rejected: "bg-destructive/10 text-destructive",
   Filled: "bg-primary/10 text-primary",
   Expired: "bg-muted text-muted-foreground",
   Removed: "bg-destructive/10 text-destructive",
 };
+
+function displayStatus(job) {
+  if (job.status === "Active" && job.verification_status === "Verified") return "Published";
+  if (job.status === "Draft" && job.verification_status === "Unverified" && job.submitted_at) return "Needs Review";
+  if (job.verification_status === "Returned") return "Returned";
+  if (job.verification_status === "Rejected") return "Rejected";
+  return job.status || "Draft";
+}
 
 export default function OrgOpportunities() {
   const { session } = useOutletContext();
@@ -34,6 +39,7 @@ export default function OrgOpportunities() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Current");
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
   const [reviewing, setReviewing] = useState(null);
   const [error, setError] = useState("");
@@ -74,12 +80,23 @@ export default function OrgOpportunities() {
 
   const staffName = (id) => staff.find((s) => s.id === id)?.display_name || "Staff";
 
-  async function submit(job) {
+  async function sendForReview(job) {
     try {
       await orgOpportunitiesApi.submit(job.id);
+      window.dispatchEvent(new CustomEvent("org-review-queue-changed"));
       await load();
     } catch (err) {
-      setError(err?.response?.data?.error || "Could not submit opportunity.");
+      setError(err?.response?.data?.error || "Could not send opportunity for review.");
+    }
+  }
+
+  async function publish(job) {
+    try {
+      await orgOpportunitiesApi.publish(job.id);
+      window.dispatchEvent(new CustomEvent("org-review-queue-changed"));
+      await load();
+    } catch (err) {
+      setError(err?.response?.data?.error || "Could not publish opportunity.");
     }
   }
 
@@ -111,12 +128,17 @@ export default function OrgOpportunities() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Opportunities</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Staff submit employer opportunities. Organization admins verify them before job seekers can see them.
+            EI staff add opportunities. The lead admin reviews and publishes what participants can see.
           </p>
         </div>
-        <Button onClick={() => { setEditing(null); setShowForm(true); }}>
-          <Plus className="w-4 h-4 mr-1" /> Add Opportunity
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setShowImport(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Add Employer + Job
+          </Button>
+          <Button variant="outline" onClick={() => { setEditing(null); setShowForm(true); }}>
+            Enter Manually
+          </Button>
+        </div>
       </div>
 
       {error && <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
@@ -136,7 +158,7 @@ export default function OrgOpportunities() {
           <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-foreground">
-              {opportunities.filter((j) => j.status === "Draft" && j.verification_status === "Unverified" && j.submitted_at).length} opportunity(ies) awaiting admin review
+              {opportunities.filter((j) => j.status === "Draft" && j.verification_status === "Unverified" && j.submitted_at).length} ready for review
             </p>
           </div>
         </div>
@@ -160,8 +182,7 @@ export default function OrgOpportunities() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-semibold text-foreground">{job.job_title}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_CLASS[job.status] || "bg-muted"}`}>{job.status}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${VERIFICATION_CLASS[job.verification_status] || "bg-muted"}`}>{job.verification_status || "Unverified"}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_CLASS[displayStatus(job)] || "bg-muted"}`}>{displayStatus(job)}</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{job.employer_name} · {job.opportunity_type || "Job"}</p>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -183,11 +204,14 @@ export default function OrgOpportunities() {
                       <Pencil className="w-4 h-4 mr-1" /> Edit
                     </Button>
                   )}
-                  {owner && job.status === "Draft" && ["Unverified", "Returned"].includes(job.verification_status || "Unverified") && !awaitingReview && (
-                    <Button size="sm" onClick={() => submit(job)}><Send className="w-4 h-4 mr-1" /> Submit</Button>
+                  {!isAdmin && owner && job.status === "Draft" && ["Unverified", "Returned"].includes(job.verification_status || "Unverified") && !awaitingReview && (
+                    <Button size="sm" onClick={() => sendForReview(job)}><Send className="w-4 h-4 mr-1" /> Send for Review</Button>
+                  )}
+                  {isAdmin && job.status === "Draft" && ["Unverified", "Returned"].includes(job.verification_status || "Unverified") && !awaitingReview && (
+                    <Button size="sm" onClick={() => publish(job)}><CheckCircle2 className="w-4 h-4 mr-1" /> Publish</Button>
                   )}
                   {isAdmin && awaitingReview && (
-                    <Button size="sm" onClick={() => setReviewing(job)}><CheckCircle2 className="w-4 h-4 mr-1" /> Review</Button>
+                    <Button size="sm" onClick={() => setReviewing(job)}><CheckCircle2 className="w-4 h-4 mr-1" /> Review & Publish</Button>
                   )}
                   {canClose && job.status === "Active" && (
                     <>
@@ -205,11 +229,20 @@ export default function OrgOpportunities() {
         })}
       </div>
 
+      <ImportEmployerOpportunityDialog
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        employers={employers}
+        isAdmin={isAdmin}
+        onSaved={async () => { setShowImport(false); await load(); }}
+      />
+
       <OpportunityForm
         open={showForm}
         onClose={() => { setShowForm(false); setEditing(null); }}
         opportunity={editing}
         employers={employers}
+        isAdmin={isAdmin}
         onSaved={async () => { setShowForm(false); setEditing(null); await load(); }}
       />
 
@@ -225,7 +258,7 @@ export default function OrgOpportunities() {
   );
 }
 
-function OpportunityForm({ open, onClose, opportunity, employers, onSaved }) {
+function OpportunityForm({ open, onClose, opportunity, employers, isAdmin, onSaved }) {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -261,11 +294,31 @@ function OpportunityForm({ open, onClose, opportunity, employers, onSaved }) {
     setSaving(true);
     setError("");
     try {
-      if (opportunity) await orgOpportunitiesApi.update(opportunity.id, form);
-      else await orgOpportunitiesApi.create(form);
+      let opportunityId = opportunity?.id;
+
+      if (opportunityId) {
+        await orgOpportunitiesApi.update(opportunityId, form);
+      } else {
+        const created = await orgOpportunitiesApi.create(form);
+        opportunityId = created?.opportunity?.id;
+      }
+
+      if (!opportunityId) throw new Error("Could not save opportunity.");
+
+      if (isAdmin) {
+        await orgOpportunitiesApi.publish(opportunityId);
+      } else {
+        await orgOpportunitiesApi.submit(opportunityId);
+        window.dispatchEvent(new CustomEvent("org-review-queue-changed"));
+      }
+
       await onSaved();
     } catch (err) {
-      setError(err?.response?.data?.error || "Could not save opportunity.");
+      setError(
+        err?.response?.data?.error ||
+        err?.message ||
+        (isAdmin ? "Could not publish opportunity." : "Could not send opportunity for review.")
+      );
     } finally {
       setSaving(false);
     }
@@ -330,7 +383,7 @@ function OpportunityForm({ open, onClose, opportunity, employers, onSaved }) {
         <div className="flex gap-2 mt-2">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button className="flex-1" onClick={save} disabled={saving || !form.org_employer_id || !form.job_title?.trim()}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Draft"}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (isAdmin ? "Publish" : "Send for Review")}
           </Button>
         </div>
       </DialogContent>
@@ -348,6 +401,7 @@ function ReviewDialog({ open, opportunity, onClose, onReviewed }) {
     setError("");
     try {
       await orgOpportunitiesApi.review(opportunity.id, decision, note);
+      window.dispatchEvent(new CustomEvent("org-review-queue-changed"));
       await onReviewed();
     } catch (err) {
       setError(err?.response?.data?.error || "Could not complete review.");
@@ -359,7 +413,7 @@ function ReviewDialog({ open, opportunity, onClose, onReviewed }) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Review Opportunity</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Review & Publish Opportunity</DialogTitle></DialogHeader>
         <div className="rounded-xl bg-muted/40 p-4">
           <p className="font-semibold">{opportunity.job_title}</p>
           <p className="text-sm text-muted-foreground">{opportunity.employer_name}</p>
@@ -371,7 +425,7 @@ function ReviewDialog({ open, opportunity, onClose, onReviewed }) {
         <div className="grid grid-cols-3 gap-2">
           <Button variant="outline" disabled={saving} onClick={() => decide("return")}><Clock3 className="w-4 h-4 mr-1" /> Return</Button>
           <Button variant="outline" disabled={saving} className="text-destructive" onClick={() => decide("reject")}><XCircle className="w-4 h-4 mr-1" /> Reject</Button>
-          <Button disabled={saving} onClick={() => decide("verify")}><CheckCircle2 className="w-4 h-4 mr-1" /> Verify</Button>
+          <Button disabled={saving} onClick={() => decide("verify")}><CheckCircle2 className="w-4 h-4 mr-1" /> Publish</Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -41,19 +41,6 @@ export default function JobFilters({ filters, onChange, onReset, jobs }) {
         </button>
       </div>
 
-      <div className="flex items-center gap-2 pb-2 border-b border-border">
-        <input
-          type="checkbox"
-          id="localOnly"
-          checked={!!filters.localOnly}
-          onChange={(e) => onChange("localOnly", e.target.checked)}
-          className="w-4 h-4 rounded border-input"
-        />
-        <label htmlFor="localOnly" className="text-sm font-medium text-foreground cursor-pointer">
-          Local employers only
-        </label>
-      </div>
-
       <div className="grid grid-cols-2 gap-3">
         <FilterRow label="Posted within">
           <select

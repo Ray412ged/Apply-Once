@@ -54,20 +54,22 @@ export default async function(req) {
 
     if (action === "create") {
       const updates = await validateOpportunityInput(ctx, body);
+      const submitForReview = body?.submit_for_review === true;
       const created = await ctx.svc.entities.JobPosting.create({
         ...updates,
         organization_id: ctx.organizationId,
         status: "Draft",
         verification_status: "Unverified",
         submitted_by_staff_id: ctx.staffAccount.id,
+        submitted_at: submitForReview ? new Date().toISOString() : undefined,
         verified_by_staff_id: "",
         review_note: "",
         provider: "manual",
-        source_name: "Organization Edition",
+        source_name: "Customer Deployment",
         local_job: true,
         administrator_verified: false,
       });
-      return Response.json({ opportunity: created });
+      return Response.json({ opportunity: created, awaiting_review: submitForReview });
     }
 
     if (action === "update") {
@@ -112,11 +114,44 @@ export default async function(req) {
       return Response.json({ opportunity: updated });
     }
 
+    if (action === "publish") {
+      requireOrgAdmin(ctx);
+      const job = await requireOrgOpportunity(ctx, body?.opportunity_id);
+
+      if (job.status !== "Draft") {
+        throw httpError("Only draft opportunities can be published", 400);
+      }
+      if (!["Unverified", "Returned"].includes(job.verification_status || "Unverified")) {
+        throw httpError("Opportunity is not available for publishing", 400);
+      }
+
+      await validateOpportunityInput(ctx, {
+        org_employer_id: job.org_employer_id,
+        job_title: job.job_title,
+        opportunity_type: job.opportunity_type,
+      }, job);
+
+      const updated = await ctx.svc.entities.JobPosting.update(job.id, {
+        verification_status: "Verified",
+        status: "Active",
+        submitted_at: job.submitted_at || new Date().toISOString(),
+        verified_by_staff_id: ctx.staffAccount.id,
+        verified_at: new Date().toISOString(),
+        administrator_verified: true,
+        review_note: "",
+      });
+      return Response.json({ opportunity: updated });
+    }
+
     if (action === "review") {
       requireOrgAdmin(ctx);
       const job = await requireOrgOpportunity(ctx, body?.opportunity_id);
       const decision = body?.decision;
       const reviewNote = String(body?.review_note || "").trim();
+
+      if (job.status !== "Draft" || job.verification_status !== "Unverified" || !job.submitted_at) {
+        throw httpError("This opportunity is not awaiting review", 409);
+      }
 
       if (!["verify", "return", "reject"].includes(decision)) {
         throw httpError("Invalid review decision", 400);

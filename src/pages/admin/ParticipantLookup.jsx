@@ -8,7 +8,7 @@ import { AlertTriangle, Loader2, History } from "lucide-react";
 
 // Reason-gated, logged individual participant lookup (Phase 8 UI on top of
 // adminParticipantLookup, built in Phase 1). This is deliberately NOT the
-// default admin view — Organizations.jsx is. Every lookup here requires a
+// default admin view. Every lookup here requires a
 // stated reason and is recorded in AdminAccessLog by the function itself,
 // before any data is returned; this screen cannot bypass that.
 export default function AdminParticipantLookup() {
@@ -69,7 +69,7 @@ export default function AdminParticipantLookup() {
         <h1 className="text-xl font-bold text-foreground">Participant lookup</h1>
         <p className="text-sm text-muted-foreground mt-1">
           For genuine support cases only — every lookup requires a reason and is permanently logged below.
-          Default to the Organizations overview for anything that doesn't need a specific person's data.
+          Use this only when Auberle Employment Institute support requires a specific participant record.
         </p>
       </div>
 
@@ -108,8 +108,7 @@ export default function AdminParticipantLookup() {
         <div className="bg-card rounded-2xl border border-border p-4 space-y-2">
           <h2 className="font-semibold text-foreground">Result</h2>
           <p className="text-sm text-foreground">
-            {result.profile?.first_name} {result.profile?.last_name} — {result.organization_links?.length || 0}{" "}
-            organization link(s), {result.activity_events?.length || 0} activity event(s) on file.
+            {result.profile?.first_name} {result.profile?.last_name} — {result.activity_events?.length || 0} activity event(s) on file.
           </p>
         </div>
       )}

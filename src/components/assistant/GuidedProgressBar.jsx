@@ -9,7 +9,6 @@ const STAGES = [
   { key: "resume", label: "Resume Upload" },
   { key: "questions", label: "Employer Questions" },
   { key: "review", label: "Review" },
-  { key: "submitted", label: "Submitted" },
 ];
 
 export default function GuidedProgressBar({ stages, onToggle }) {

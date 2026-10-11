@@ -19,13 +19,13 @@ export async function resolveOrgContext(base44) {
   );
 
   if (staffRows.length === 0) {
-    const err = new Error("No active organization staff assignment for this account");
+    const err = new Error("No active Auberle Employment Institute staff seat for this account");
     err.status = 403;
     throw err;
   }
 
   if (staffRows.length > 1) {
-    const err = new Error("Multiple active organization staff assignments found for this account");
+    const err = new Error("Multiple active Auberle Employment Institute staff seats were found for this account");
     err.status = 409;
     throw err;
   }
@@ -39,7 +39,7 @@ export async function resolveOrgContext(base44) {
   const organization = orgs[0] || null;
 
   if (!organization || organization.active === false) {
-    const err = new Error("Organization workspace is inactive or unavailable");
+    const err = new Error("Auberle Employment Institute workspace is inactive or unavailable");
     err.status = 403;
     throw err;
   }

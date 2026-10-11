@@ -5,8 +5,6 @@ import { base44 } from "@/api/base44Client";
 import { computeMatchScore } from "@/lib/matching";
 import { removeSavedJob } from "@/lib/savedJobs";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
-import { isGuest } from "@/lib/guestStorage";
-import { useGuestJobGate } from "@/components/jobs/GuestJobGateContext";
 import { Bookmark, RotateCcw, Layers, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getJobsForMe } from "@/lib/orgJobs";
@@ -14,13 +12,6 @@ import JobSwipeCard from "@/components/jobs/JobSwipeCard";
 import SavedJobsList from "@/components/jobs/SavedJobsList";
 import ApplicationsList from "@/components/jobs/ApplicationsList";
 import SwipeCoachmark, { hasSeenSwipeTutorial } from "@/components/jobs/SwipeCoachmark";
-
-const MATCH_RANK = {
-  "Strong Match": 4,
-  "Possible Match": 3,
-  "Stretch Opportunity": 2,
-  "Review Needed": 1,
-};
 
 /**
  * Discovery view — a PRESENTATIONAL consumer of the single shared filtered
@@ -43,12 +34,9 @@ export default function DiscoveryView({
   onApply,
   preferences,
   profileData,
-  savedIds,
 }) {
   const navigate = useNavigate();
   const prefersReducedMotion = useReducedMotion();
-  const guest = isGuest();
-  const { requireAccount } = useGuestJobGate();
   const [index, setIndex] = useState(0);
   const [reviewDismissed, setReviewDismissed] = useState(false);
   const { data: savedJobRecords = [] } = useSavedJobs();
@@ -96,7 +84,6 @@ export default function DiscoveryView({
   }, [savedJobRecords]);
 
   useEffect(() => {
-    if (guest) return;
     let cancelled = false;
     async function loadApplications() {
       try {
@@ -115,7 +102,7 @@ export default function DiscoveryView({
     }
     loadApplications();
     return () => { cancelled = true; };
-  }, [guest]);
+  }, []);
 
   const currentJob = displayJobs[index];
   const currentJobMatch = currentJob
@@ -147,7 +134,6 @@ export default function DiscoveryView({
   };
 
   const handleSave = async (job) => {
-    if (requireAccount(`/jobs/${job.id}`)) return;
     const ok = onSave ? await onSave(job) : false;
     if (ok) {
       setDismissToast(null);

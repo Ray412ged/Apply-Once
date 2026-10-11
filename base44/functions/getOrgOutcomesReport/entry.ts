@@ -38,12 +38,7 @@ export default async function(req) {
 
     const participantIds = [...new Set(allLinks.map((l) => l.participant_id))];
     const linkByParticipant = new Map();
-    const linksByParticipant = new Map();
     for (const l of allLinks) {
-      const history = linksByParticipant.get(l.participant_id) || [];
-      history.push(l);
-      linksByParticipant.set(l.participant_id, history);
-
       // Use the earliest enrollment for days-to-first-application.
       const existing = linkByParticipant.get(l.participant_id);
       if (!existing || new Date(l.linked_at) < new Date(existing.linked_at)) {
@@ -51,15 +46,33 @@ export default async function(req) {
       }
     }
 
+    const employmentOutcomes = await svc.entities.EmploymentOutcome.filter(
+      { organization_id: organizationId, status: "Active" },
+      "-employment_start_date",
+      1000
+    );
+
     if (participantIds.length === 0) {
-      return Response.json(emptyReport(organizationId));
+      const empty = emptyReport(organizationId);
+      empty.total_hires = employmentOutcomes.length;
+      empty.offer_accepted_count = employmentOutcomes.length;
+      empty.hires_through_org_opportunities = employmentOutcomes.filter((o) => o.through_organization_opportunity).length;
+      return Response.json(empty);
     }
 
     let profilesCompletedCount = 0;
     let resumesGeneratedCount = 0;
     let applicationsSubmittedCount = 0;
     let readyToApplyCount = 0;
-    let offerAcceptedCount = 0;
+    const offerAcceptedCount = employmentOutcomes.length;
+    const hiresThroughOrgOpportunities = employmentOutcomes.filter(
+      (o) => o.through_organization_opportunity
+    ).length;
+    const outcomesBySource = {
+      "Job Seeker Reported": employmentOutcomes.filter((o) => o.source === "Job Seeker Reported").length,
+      "Staff Verified": employmentOutcomes.filter((o) => o.source === "Staff Verified").length,
+      "Employer Confirmed": employmentOutcomes.filter((o) => o.source === "Employer Confirmed").length,
+    };
     const daysToFirstApplication = [];
     const activitySinceEnrollmentCounts = [];
     const careerInterestCounts = {};
@@ -82,21 +95,6 @@ export default async function(req) {
       const profile = profiles[0] || null;
       const isComplete = isCoreProfileComplete({ profile, employment, skills });
       if (isComplete) profilesCompletedCount++;
-
-      // Count an accepted offer only when its recorded date falls inside one
-      // of this organization's actual connection periods. This prevents the
-      // same later hire from being counted by multiple organizations after a
-      // participant changes sponsors.
-      if (profile?.employment_status === 'Offer Accepted' && profile?.offer_accepted_date) {
-        const offerTime = new Date(profile.offer_accepted_date).getTime();
-        const orgLinks = linksByParticipant.get(participantId) || [];
-        const belongsToThisOrg = orgLinks.some((link) => {
-          const start = new Date(link.linked_at).getTime();
-          const end = link.revoked_at ? new Date(link.revoked_at).getTime() : Infinity;
-          return Number.isFinite(offerTime) && Number.isFinite(start) && offerTime >= start && offerTime <= end;
-        });
-        if (belongsToThisOrg) offerAcceptedCount++;
-      }
 
       // Current classification (uses only recent activity, matching
       // getOrgDashboard's own window) — for the "currently Ready to Apply"
@@ -173,6 +171,9 @@ export default async function(req) {
       currently_ready_to_apply: readyToApplyCount,
       average_days_to_first_application: avgDaysToFirstApplication,
       offer_accepted_count: offerAcceptedCount,
+      total_hires: offerAcceptedCount,
+      hires_through_org_opportunities: hiresThroughOrgOpportunities,
+      outcomes_by_source: outcomesBySource,
       average_activity_since_enrollment: avgActivitySinceEnrollment,
       activity_since_enrollment_note:
         'Counts real actions recorded since each participant enrolled (profile sections completed, resumes generated, applications submitted, logins) — an activity count, not a precision before/after readiness score.',
@@ -182,9 +183,9 @@ export default async function(req) {
         profile_completion:
           'Reflects presence of core profile sections (contact info, employment history, skills, professional summary) — not a weighted quality score.',
         employment_outcomes:
-          'Offer Accepted counts are participant self-reported and counted only when the recorded offer date falls within this organization\'s connection period. Employer verification is not yet available.',
+          'Hire counts come from EmploymentOutcome records attributed to this organization by employment start date. Sources are shown separately as Job Seeker Reported, Staff Verified, or Employer Confirmed.',
         general:
-          'These figures represent aggregate program outcomes as recorded in Apply Once, not verified employer or third-party records.',
+          'These figures represent aggregate program outcomes recorded in Apply Once. The source field distinguishes job-seeker reports, staff verification, and employer confirmation.',
       },
     });
   } catch (error) {
@@ -202,6 +203,13 @@ function emptyReport(organizationId) {
     currently_ready_to_apply: 0,
     average_days_to_first_application: null,
     offer_accepted_count: 0,
+    total_hires: 0,
+    hires_through_org_opportunities: 0,
+    outcomes_by_source: {
+      "Job Seeker Reported": 0,
+      "Staff Verified": 0,
+      "Employer Confirmed": 0,
+    },
     average_activity_since_enrollment: null,
     activity_since_enrollment_note:
       'Counts real actions recorded since each participant enrolled (profile sections completed, resumes generated, applications submitted, logins) — an activity count, not a precision before/after readiness score.',
@@ -211,9 +219,9 @@ function emptyReport(organizationId) {
       profile_completion:
         'Reflects presence of core profile sections (contact info, employment history, skills, professional summary) — not a weighted quality score.',
       employment_outcomes:
-        'Offer Accepted counts are participant self-reported and counted only when the recorded offer date falls within this organization\'s connection period. Employer verification is not yet available.',
+        'Hire counts come from EmploymentOutcome records attributed to this organization by employment start date. Sources are shown separately as Job Seeker Reported, Staff Verified, or Employer Confirmed.',
       general:
-        'These figures represent aggregate program outcomes as recorded in Apply Once, not verified employer or third-party records.',
+        'These figures represent aggregate program outcomes recorded in Apply Once. The source field distinguishes job-seeker reports, staff verification, and employer confirmation.',
     },
   };
 }

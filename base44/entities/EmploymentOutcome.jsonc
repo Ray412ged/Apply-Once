@@ -1,0 +1,120 @@
+{
+  "name": "EmploymentOutcome",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string"
+    },
+    "participant_id": {
+      "type": "string"
+    },
+    "application_id": {
+      "type": "string"
+    },
+    "job_posting_id": {
+      "type": "string"
+    },
+    "org_employer_id": {
+      "type": "string"
+    },
+    "employer_name": {
+      "type": "string"
+    },
+    "position_title": {
+      "type": "string"
+    },
+    "employment_start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "reported_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "outcome_type": {
+      "type": "string",
+      "enum": [
+        "Hired"
+      ],
+      "default": "Hired"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "Job Seeker Reported",
+        "Staff Verified",
+        "Employer Confirmed"
+      ]
+    },
+    "reported_by_user_id": {
+      "type": "string"
+    },
+    "verified_by_staff_id": {
+      "type": "string"
+    },
+    "wage_amount": {
+      "type": "number"
+    },
+    "wage_period": {
+      "type": "string",
+      "enum": [
+        "hourly",
+        "weekly",
+        "monthly",
+        "annual"
+      ]
+    },
+    "through_organization_opportunity": {
+      "type": "boolean",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Voided"
+      ],
+      "default": "Active"
+    },
+    "voided_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "voided_by_staff_id": {
+      "type": "string"
+    },
+    "void_reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "participant_id",
+    "employment_start_date",
+    "outcome_type",
+    "source",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    }
+  }
+}

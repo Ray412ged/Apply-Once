@@ -10,8 +10,6 @@ import {
   Clock,
 } from "lucide-react";
 
-const RUN_TYPES = ["Job Import", "Job Match", "Extraction", "Scheduled", "Manual"];
-
 export default function SearchRuns() {
   const [loading, setLoading] = useState(true);
   const [runs, setRuns] = useState([]);

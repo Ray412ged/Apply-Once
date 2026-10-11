@@ -10,7 +10,7 @@
  *   - resumeCanGenerate threshold.
  */
 
-import { generateResume, canGenerateResume } from "./resumeGenerator";
+import { generateResume } from "./resumeGenerator";
 
 let _pass = 0, _fail = 0;
 const _failures = [];

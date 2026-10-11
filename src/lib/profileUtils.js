@@ -3,12 +3,6 @@ import { queryClientInstance, PROFILE_DATA_QUERY_KEY } from "@/lib/query-client"
 import { PROFILE_SECTIONS, TOTAL_SECTIONS, CONTENT_SECTIONS } from "@/lib/profileSections";
 import { logCredentialEvent, setCredentialSource, setCredentialOrigin } from "@/lib/credentialDebugLog";
 import {
-  isGuest,
-  getGuestSingle,
-  saveGuestSingle,
-  getGuestRecords,
-} from "@/lib/guestStorage";
-import {
   isAboutMeComplete,
   isJobGoalsComplete,
   isEmploymentComplete,
@@ -20,16 +14,9 @@ import {
   isComplete,
   isAddressed,
 } from "@/lib/sectionCompletion";
-import { buildProfileSnapshot } from "@/lib/readiness/profileSnapshot";
-import { evaluateSections } from "@/lib/readiness/sectionStatuses";
-import { getNextBestStep } from "@/lib/readiness/nextBestStep";
-import { SECTION_MAP } from "@/lib/profileSections";
 
 // Load all profile section data and compute completion
 export async function loadProfileCompletion() {
-  if (isGuest()) {
-    return loadGuestCompletion();
-  }
   return loadApiCompletion();
 }
 
@@ -60,19 +47,6 @@ async function loadApiCompletion() {
   return buildCompletion({
     profiles, preferences, employment, education, skills,
     credentials, references, documents,
-  });
-}
-
-function loadGuestCompletion() {
-  return buildCompletion({
-    profiles: getGuestSingle("UserProfile") ? [getGuestSingle("UserProfile")] : [],
-    preferences: getGuestSingle("JobPreference") ? [getGuestSingle("JobPreference")] : [],
-    employment: getGuestRecords("EmploymentRecord"),
-    education: getGuestRecords("EducationRecord"),
-    skills: getGuestRecords("Skill"),
-    credentials: getGuestRecords("Credential"),
-    references: getGuestRecords("Reference"),
-    documents: getGuestRecords("UserDocument"),
   });
 }
 
@@ -152,14 +126,7 @@ export async function updateProfileCompletion() {
   });
 
   let profileUpdate = {};
-  if (isGuest()) {
-    const profile = completion.profile || {};
-    saveGuestSingle("UserProfile", {
-      ...profile,
-      profile_completion_percentage: completion.percentage,
-      onboarding_status: completion.percentage === 100 ? "completed" : "in_progress",
-    });
-  } else if (completion.profile) {
+  if (completion.profile) {
     profileUpdate = {
       profile_completion_percentage: completion.percentage,
       onboarding_status: completion.percentage === 100 ? "completed" : "in_progress",
@@ -192,72 +159,11 @@ export function getNextIncompleteSection(sections) {
   return PROFILE_SECTIONS.find((s) => s.id === "review") || PROFILE_SECTIONS[0];
 }
 
-/**
- * Consults the Application Readiness Engine to determine the single
- * highest-priority next step from the user's current profile data.
- * Returns the engine's nextBestStep or null if data is unavailable.
- */
-export function getNextBestStepFromCompletion(completion) {
-  if (!completion) return null;
-  const snapshot = buildProfileSnapshot(completion);
-  const sectionStatuses = evaluateSections(snapshot);
-  return getNextBestStep(sectionStatuses);
-}
-
 // Find the previous section before a given section ID
 export function getPrevSection(currentSectionId) {
   const idx = PROFILE_SECTIONS.findIndex((s) => s.id === currentSectionId);
   if (idx <= 0) return null;
   return PROFILE_SECTIONS[idx - 1];
-}
-
-// Find the next section after a given section ID
-export function getNextSection(currentSectionId) {
-  const idx = PROFILE_SECTIONS.findIndex((s) => s.id === currentSectionId);
-  if (idx < 0 || idx >= PROFILE_SECTIONS.length - 1) return null;
-  return PROFILE_SECTIONS[idx + 1];
-}
-
-export function getSectionStatus(sectionId, sectionStatuses) {
-  return sectionStatuses?.[sectionId] || "not_started";
-}
-
-// Optional sections that can be resolved by declaring "none".
-const OPTIONAL_SECTION_IDS = ["education", "credentials", "references"];
-
-/**
- * Returns the first unresolved optional section (not completed and not
- * resolved), so the UI can guide the user through each one in turn. Returns
- * null when every optional section has been addressed.
- */
-export function getNextUnresolvedOptional(completion) {
-  const statuses = completion?.sectionStatuses;
-  if (!statuses) return null;
-  for (const id of OPTIONAL_SECTION_IDS) {
-    const status = statuses[id];
-    if (status && !isAddressed(status)) {
-      const section = SECTION_MAP[id];
-      if (section) {
-        return {
-          id,
-          title: section.title,
-          route: `/profile/edit?section=${id}`,
-        };
-      }
-    }
-  }
-  return null;
-}
-
-/**
- * True when every optional section has been addressed (completed or resolved).
- * Used to decide when the save-account prompt may claim the profile is fully
- * ready.
- */
-export function isAllOptionalAddressed(completion) {
-  const statuses = completion?.sectionStatuses;
-  if (!statuses) return false;
-  return OPTIONAL_SECTION_IDS.every((id) => isAddressed(statuses[id]));
 }
 
 export { PROFILE_SECTIONS, TOTAL_SECTIONS, CONTENT_SECTIONS };

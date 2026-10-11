@@ -2,50 +2,55 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import {
   ChevronRight,
   Calendar,
-  StickyNote,
   ChevronDown,
   ChevronUp,
   Briefcase,
   ExternalLink,
 } from "lucide-react";
 import { ApplicationsListSkeleton } from "@/components/Skeleton";
-import { recordActivity } from "@/lib/recordActivity";
 import { getJobsForMe } from "@/lib/orgJobs";
 
+const WORKSPACE_IN_PROGRESS_STATUSES = [
+  "Readiness Started",
+  "Needs Information",
+  "Ready to Apply",
+  "Application Started",
+];
+
 const TABS = [
-  { id: "preparing", label: "Preparing", statuses: ["Interested", "Preparing"] },
-  { id: "ready", label: "Ready", statuses: ["Ready for Review"] },
-  { id: "submitted", label: "Submitted", statuses: ["Submitted"] },
-  { id: "interviews", label: "Interviews", statuses: ["Interview"] },
-  { id: "offers", label: "Offers", statuses: ["Offer"] },
-  { id: "closed", label: "Closed", statuses: ["Rejected", "Withdrawn", "Closed"] },
+  {
+    id: "in-progress",
+    label: "In Progress",
+    statuses: ["Interested", "Preparing", "Ready for Review", ...WORKSPACE_IN_PROGRESS_STATUSES],
+  },
+  {
+    id: "applied",
+    label: "Applied",
+    statuses: ["Submitted", "Interview", "Offer", "Hired", "Not Selected", "Rejected", "Withdrawn", "Closed", "Closed - No Response"],
+  },
 ];
 
 const STATUS_COLORS = {
   Interested: "bg-primary/10 text-primary",
   Preparing: "bg-primary/10 text-primary",
+  "Readiness Started": "bg-primary/10 text-primary",
+  "Needs Information": "bg-primary/10 text-primary",
+  "Ready to Apply": "bg-primary/10 text-primary",
+  "Application Started": "bg-primary/10 text-primary",
   "Ready for Review": "bg-warning/10 text-warning",
   Submitted: "bg-blue-100 text-blue-700",
   Interview: "bg-purple-100 text-purple-700",
   Offer: "bg-success/10 text-success",
+  Hired: "bg-success/10 text-success",
+  "Not Selected": "bg-destructive/10 text-destructive",
   Rejected: "bg-destructive/10 text-destructive",
   Withdrawn: "bg-muted text-muted-foreground",
   Closed: "bg-muted text-muted-foreground",
-};
-
-const NEXT_STATUSES = {
-  Interested: "Preparing",
-  Preparing: "Ready for Review",
-  "Ready for Review": "Submitted",
-  Submitted: "Interview",
-  Interview: "Offer",
-  Offer: "Closed",
+  "Closed - No Response": "bg-muted text-muted-foreground",
 };
 
 export default function Applications() {
@@ -53,11 +58,8 @@ export default function Applications() {
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
   const [jobs, setJobs] = useState({});
-  const [activeTab, setActiveTab] = useState("preparing");
+  const [activeTab, setActiveTab] = useState("in-progress");
   const [expandedId, setExpandedId] = useState(null);
-  const [notes, setNotes] = useState({});
-  const [followUpDate, setFollowUpDate] = useState({});
-  const [interviewDate, setInterviewDate] = useState({});
 
   useEffect(() => {
     async function loadData() {
@@ -80,38 +82,6 @@ export default function Applications() {
   const currentTab = TABS.find((t) => t.id === activeTab);
   const filteredApps = applications.filter((a) => currentTab.statuses.includes(a.status));
 
-  const handleAdvance = async (app) => {
-    const nextStatus = NEXT_STATUSES[app.status];
-    if (!nextStatus) return;
-    try {
-      const updated = await base44.entities.Application.update(app.id, {
-        status: nextStatus,
-        ...(nextStatus === "Submitted" && { application_submitted_date: new Date().toISOString() }),
-      });
-      if (nextStatus === "Submitted") {
-        recordActivity("application_submitted");
-      }
-      setApplications(applications.map((a) => (a.id === app.id ? updated : a)));
-    } catch (err) {
-      console.error("Failed to update application:", err);
-    }
-  };
-
-  const handleSaveNotes = async (app) => {
-    try {
-      await base44.entities.Application.update(app.id, {
-        notes: notes[app.id] ?? app.notes,
-        follow_up_date: followUpDate[app.id] ?? app.follow_up_date,
-        interview_date: interviewDate[app.id] ?? app.interview_date,
-      });
-      const updated = await base44.entities.Application.get(app.id);
-      setApplications(applications.map((a) => (a.id === app.id ? updated : a)));
-      setExpandedId(null);
-    } catch (err) {
-      console.error("Failed to save notes:", err);
-    }
-  };
-
   if (loading) {
     return <ApplicationsListSkeleton />;
   }
@@ -121,7 +91,7 @@ export default function Applications() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Applications</h1>
         <p className="text-muted-foreground text-sm mt-0.5">
-          Track your progress on each application
+          Finish an application or see what you already applied to.
         </p>
       </div>
 
@@ -160,12 +130,7 @@ export default function Applications() {
               <div key={app.id} className="bg-card rounded-2xl border border-border overflow-hidden">
                 <div
                   className="p-4 flex items-center gap-3 cursor-pointer"
-                  onClick={() => {
-                    setExpandedId(isExpanded ? null : app.id);
-                    setNotes({ ...notes, [app.id]: app.notes || "" });
-                    setFollowUpDate({ ...followUpDate, [app.id]: app.follow_up_date || "" });
-                    setInterviewDate({ ...interviewDate, [app.id]: app.interview_date || "" });
-                  }}
+                  onClick={() => setExpandedId(isExpanded ? null : app.id)}
                 >
                   <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
                     <Briefcase className="w-5 h-5 text-muted-foreground" />
@@ -177,7 +142,7 @@ export default function Applications() {
                     <p className="text-sm text-muted-foreground truncate">{job?.employer_name}</p>
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[app.status] || "bg-muted text-muted-foreground"}`}>
-                    {app.status}
+                    {TABS[0].statuses.includes(app.status) ? "In Progress" : "Applied"}
                   </span>
                   {isExpanded ? (
                     <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
@@ -196,7 +161,7 @@ export default function Applications() {
                     )}
                     {app.application_submitted_date && (
                       <div className="text-sm text-muted-foreground">
-                        Submitted: {new Date(app.application_submitted_date).toLocaleDateString()}
+                        Applied: {new Date(app.application_submitted_date).toLocaleDateString()}
                       </div>
                     )}
                     {job?.application_deadline && (
@@ -219,68 +184,16 @@ export default function Applications() {
                       </a>
                     )}
 
-                    {/* Follow-up date */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1.5 text-sm">
-                        <Calendar className="w-4 h-4" />
-                        Follow-up reminder
-                      </Label>
-                      <Input
-                        type="date"
-                        value={followUpDate[app.id] || ""}
-                        onChange={(e) => setFollowUpDate({ ...followUpDate, [app.id]: e.target.value })}
-                        className="h-11"
-                      />
-                    </div>
-
-                    {/* Interview date */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1.5 text-sm">
-                        <Calendar className="w-4 h-4" />
-                        Interview date
-                      </Label>
-                      <Input
-                        type="date"
-                        value={interviewDate[app.id] || ""}
-                        onChange={(e) => setInterviewDate({ ...interviewDate, [app.id]: e.target.value })}
-                        className="h-11"
-                      />
-                    </div>
-
-                    {/* Notes */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1.5 text-sm">
-                        <StickyNote className="w-4 h-4" />
-                        Notes
-                      </Label>
-                      <Textarea
-                        value={notes[app.id] || ""}
-                        onChange={(e) => setNotes({ ...notes, [app.id]: e.target.value })}
-                        placeholder="Add notes about this application..."
-                        className="min-h-[80px] text-sm"
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
+                    {TABS[0].statuses.includes(app.status) && (
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="flex-1 h-10"
-                        onClick={() => handleSaveNotes(app)}
+                        className="w-full h-10"
+                        onClick={() => navigate(`/workspace/${app.job_posting_id}`)}
                       >
-                        Save Changes
+                        Continue Application
+                        <ChevronRight className="w-4 h-4 ml-1" />
                       </Button>
-                      {NEXT_STATUSES[app.status] && (
-                        <Button
-                          size="sm"
-                          className="flex-1 h-10"
-                          onClick={() => handleAdvance(app)}
-                        >
-                          Move to {NEXT_STATUSES[app.status]}
-                          <ChevronRight className="w-4 h-4 ml-1" />
-                        </Button>
-                      )}
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -291,7 +204,7 @@ export default function Applications() {
         <div className="bg-card rounded-2xl border border-dashed border-border p-8 text-center">
           <Briefcase className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
           <p className="text-muted-foreground text-sm">
-            No applications in this stage yet.
+            No applications here yet.
           </p>
           <Button
             variant="outline"

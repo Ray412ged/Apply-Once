@@ -42,23 +42,3 @@ export function stripHtml(html) {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
-
-/**
- * Checks if a string appears to contain HTML tags.
- * @param {string} text
- * @returns {boolean}
- */
-export function containsHtml(text) {
-  if (!text) return false;
-  return /<[a-z][\s\S]*?>/i.test(text);
-}
-
-/**
- * Cleans job description text: strips HTML if present, otherwise returns as-is.
- * @param {string} text
- * @returns {string}
- */
-export function cleanJobDescription(text) {
-  if (!text) return "";
-  return containsHtml(text) ? stripHtml(text) : text;
-}

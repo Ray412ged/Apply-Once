@@ -133,7 +133,7 @@ export function findDuplicateUserDocument(newData, existingRecords = []) {
 /**
  * Find an existing reusable answer that matches.
  * Compares normalized question + answer so the same Q&A saved twice
- * (e.g. once as a guest, again after migration) is deduped.
+ * (e.g. imported more than once) is deduped.
  */
 export function findDuplicateReusableAnswer(newData, existingRecords = []) {
   const q = normalizeStr(newData.question);

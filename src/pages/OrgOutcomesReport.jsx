@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useOutletContext, useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
   Loader2,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import DashboardStatTile from "@/components/dashboard/DashboardStatTile";
+import OrgEmploymentOutcomesPanel from "@/components/organization/OrgEmploymentOutcomesPanel";
 
 // Program Outcomes Reporting (Phase 7) — cumulative, all-time figures for
 // grant reporting and program evaluation, distinct from the day-to-day
@@ -24,10 +25,12 @@ import DashboardStatTile from "@/components/dashboard/DashboardStatTile";
 // than presenting numbers as more precise or verified than they are.
 export default function OrgOutcomesReport() {
   const { slug } = useParams();
+  const { session } = useOutletContext();
   const [org, setOrg] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -36,7 +39,7 @@ export default function OrgOutcomesReport() {
         setError(null);
         const orgs = await base44.entities.Organization.filter({ slug }, "-created_date", 1);
         if (orgs.length === 0) {
-          setError("No organization found for this link.");
+          setError("Auberle Employment Institute workspace unavailable.");
           return;
         }
         setOrg(orgs[0]);
@@ -53,7 +56,7 @@ export default function OrgOutcomesReport() {
       }
     }
     load();
-  }, [slug]);
+  }, [slug, refreshKey]);
 
   if (loading) {
     return (
@@ -122,7 +125,8 @@ export default function OrgOutcomesReport() {
           <DashboardStatTile icon={FileText} label="Resumes generated" value={data?.resumes_generated ?? 0} accent="primary" accentColor={brandColor} />
           <DashboardStatTile icon={Send} label="Applications submitted" value={data?.applications_submitted ?? 0} accent="primary" accentColor={brandColor} />
           <DashboardStatTile icon={ThumbsUp} label="Currently ready to apply" value={data?.currently_ready_to_apply ?? 0} accent="success" />
-          <DashboardStatTile icon={Briefcase} label="Offer accepted" value={data?.offer_accepted_count ?? 0} accent="success" />
+          <DashboardStatTile icon={Briefcase} label="Total hires" value={data?.total_hires ?? 0} accent="success" />
+          <DashboardStatTile icon={Briefcase} label="Hires through org opportunities" value={data?.hires_through_org_opportunities ?? 0} accent="success" />
           <DashboardStatTile
             icon={CalendarClock}
             label="Avg. days to first application"
@@ -136,6 +140,11 @@ export default function OrgOutcomesReport() {
             accent="muted"
           />
         </div>
+
+        <OrgEmploymentOutcomesPanel
+          isAdmin={session?.org_role === "org_admin"}
+          onChanged={() => setRefreshKey((k) => k + 1)}
+        />
 
         {(data?.most_common_occupations?.length > 0 || data?.most_common_industries?.length > 0) && (
           <div className="bg-card rounded-2xl border border-border p-4 space-y-3">

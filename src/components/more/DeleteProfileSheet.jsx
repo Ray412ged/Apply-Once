@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { isGuest, clearAllGuestData } from "@/lib/guestStorage";
 import { queryClientInstance } from "@/lib/query-client";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,13 +32,6 @@ const PROFILE_ENTITIES = [
 ];
 
 const MODE_CONFIG = {
-  guest: {
-    title: "Delete Profile?",
-    description:
-      "This will permanently delete your profile and all data stored on this device. This cannot be undone.",
-    buttonLabel: "Yes, Delete My Profile",
-    showDownload: false,
-  },
   profile: {
     title: "Delete Profile?",
     description:
@@ -57,35 +49,27 @@ const MODE_CONFIG = {
 };
 
 export default function DeleteProfileSheet({ open, onOpenChange, mode }) {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
 
-  // Infer mode from auth state if not explicitly passed.
-  const effectiveMode = mode || (!user && isGuest() ? "guest" : "account");
+  const effectiveMode = mode || "account";
   const config = MODE_CONFIG[effectiveMode] || MODE_CONFIG.account;
 
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError(null);
     try {
-      if (effectiveMode === "guest") {
-        // Guest: clear all local data only (no DB records to delete).
-        clearAllGuestData();
-        queryClientInstance.clear();
-        window.location.href = "/welcome";
-      } else if (effectiveMode === "profile") {
+      if (effectiveMode === "profile") {
         // Delete Profile: wipe all entity records, keep account active.
         await Promise.all(
           PROFILE_ENTITIES.map((entity) =>
             base44.entities[entity].deleteMany({}).catch(() => {})
           )
         );
-        clearAllGuestData();
         queryClientInstance.clear();
-        // User stays logged in; full reload resets state and Home.jsx
-        // will create a fresh empty profile.
-        window.location.href = "/welcome";
+        // User stays logged in; Home.jsx will create a fresh empty profile.
+        window.location.href = "/home";
       } else {
         // Delete Account: run the full deletion (all associated data +
         // the User record itself) through a service-role backend
@@ -108,11 +92,10 @@ export default function DeleteProfileSheet({ open, onOpenChange, mode }) {
           return;
         }
 
-        clearAllGuestData();
         queryClientInstance.clear();
-        // Sign out and redirect to Welcome — only reached on confirmed success.
+        // Sign out only after confirmed deletion.
         logout(false);
-        window.location.href = "/welcome";
+        window.location.href = "/login";
       }
     } catch (err) {
       console.error("Failed to delete:", err);

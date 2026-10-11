@@ -2,16 +2,12 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { PROFILE_SECTIONS } from "@/lib/profileSections";
 import { isAddressed } from "@/lib/sectionCompletion";
-import { isGuest } from "@/lib/guestStorage";
-import { saveGuestRedirect } from "@/lib/guestRedirect";
 import { ChevronLeft, Check, ChevronRight, ArrowRight, CircleDashed, Home } from "lucide-react";
 import ProgressBar from "@/components/ProgressBar";
 
 export default function ProfileReview({ completion, onExit }) {
   const navigate = useNavigate();
-  const guest = isGuest();
   const sectionStatuses = completion?.sectionStatuses || {};
-  const sections = completion?.sections || {};
   const percentage = completion?.percentage || 0;
 
   const completedCount = completion?.completedCount ?? Object.values(sectionStatuses).filter((s) => s === "completed").length;
@@ -118,17 +114,6 @@ export default function ProfileReview({ completion, onExit }) {
               View My Job Matches
               <ArrowRight className="w-5 h-5" />
             </button>
-            {guest && (
-              <button
-                onClick={() => {
-                  saveGuestRedirect("/jobs");
-                  window.location.href = "/welcome";
-                }}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground py-1"
-              >
-                Save My Profile First
-              </button>
-            )}
           </div>
         ) : (
           <div className="space-y-2">

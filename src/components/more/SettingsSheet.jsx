@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useProfileData, useInvalidateProfileData } from "@/hooks/useProfileData";
-import { isGuest, saveGuestSingle } from "@/lib/guestStorage";
 import {
   Sheet,
   SheetContent,
@@ -30,9 +29,7 @@ export default function SettingsSheet({ open, onOpenChange }) {
       consent_to_ai_processing: newValue,
       consent_timestamp: newValue ? new Date().toISOString() : undefined,
     };
-    if (isGuest()) {
-      saveGuestSingle("UserProfile", updates);
-    } else if (profile?.id) {
+    if (profile?.id) {
       await base44.entities.UserProfile.update(profile.id, updates);
     }
     invalidate();

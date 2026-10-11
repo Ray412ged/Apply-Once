@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const UserNotRegisteredError = () => {
   return (
@@ -12,14 +12,13 @@ const UserNotRegisteredError = () => {
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-4">Access Restricted</h1>
           <p className="text-slate-600 mb-8">
-            You are not registered to use this application. Please contact the app administrator to request access.
+            Apply Once access is provided through Auberle Employment Institute. Please use the invitation sent by Auberle EI.
           </p>
           <div className="p-4 bg-slate-50 rounded-md text-sm text-slate-600">
-            <p>If you believe this is an error, you can:</p>
+            <p>If you believe this is an error:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Verify you are logged in with the correct account</li>
-              <li>Contact the app administrator for access</li>
-              <li>Try logging out and back in again</li>
+              <li>Make sure you are signing in with the email used for your Auberle EI invitation</li>
+              <li>Contact Auberle Employment Institute if you need a new invitation</li>
             </ul>
           </div>
         </div>

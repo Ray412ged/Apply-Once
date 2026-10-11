@@ -9,22 +9,22 @@ import {
 import { Button } from "@/components/ui/button";
 import CompanyLogo from "@/components/jobs/CompanyLogo";
 
-const STATUS_LABELS = {
-  Interested: "Application Started",
-  Preparing: "Preparing",
-  "Ready for Review": "Ready for Review",
-  Submitted: "Applied",
-  Interview: "Interview",
-  Offer: "Offer",
-  Rejected: "Rejected",
-  Withdrawn: "Withdrawn",
-  Closed: "Closed",
-};
+const APPLIED_STATUSES = new Set([
+  "Submitted",
+  "Interview",
+  "Offer",
+  "Hired",
+  "Rejected",
+  "Not Selected",
+  "Withdrawn",
+  "Closed",
+  "Closed - No Response",
+]);
 
 export default function AssistantHeader({ job, application, onContinue, onMarkApplied }) {
   const startDate = application?.application_started_date || application?.created_date;
-  const statusLabel = STATUS_LABELS[application?.status] || "Application Started";
-  const isApplied = application?.status === "Submitted";
+  const isApplied = APPLIED_STATUSES.has(application?.status);
+  const statusLabel = isApplied ? "Applied" : "In Progress";
   const location = [job.city, job.state].filter(Boolean).join(", ") || job.location;
 
   return (

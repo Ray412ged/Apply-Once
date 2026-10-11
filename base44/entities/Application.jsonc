@@ -18,10 +18,12 @@
         "Submitted",
         "Interview",
         "Offer",
+        "Hired",
         "Not Selected",
         "Rejected",
         "Withdrawn",
-        "Closed"
+        "Closed",
+        "Closed - No Response"
       ],
       "default": "Interested"
     },

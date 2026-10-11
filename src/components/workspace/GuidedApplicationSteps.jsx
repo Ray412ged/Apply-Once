@@ -8,7 +8,6 @@ import ReviewItemsList from "@/components/scanner/ReviewItemsList";
 import OpportunitiesList from "@/components/scanner/OpportunitiesList";
 import QuestionGeneratorSection from "@/components/assistant/QuestionGeneratorSection";
 import ReusableAnswersSection from "@/components/assistant/ReusableAnswersSection";
-import { isGuest, addGuestRecord } from "@/lib/guestStorage";
 import { useGuidedStages } from "./useGuidedStages";
 
 const CATEGORY_TO_TYPE = {
@@ -72,11 +71,7 @@ export default function GuidedApplicationSteps({
       user_confirmed: true,
     };
     try {
-      if (isGuest()) {
-        addGuestRecord("ReusableAnswer", payload);
-      } else {
-        await base44.entities.ReusableAnswer.create(payload);
-      }
+      await base44.entities.ReusableAnswer.create(payload);
       onAnswerSaved?.();
     } catch (err) {
       console.error("Failed to save reusable answer:", err);

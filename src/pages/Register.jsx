@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,14 @@ import { Label } from "@/components/ui/label";
 import { FormError } from "@/components/ui/form-error";
 import { Mail, Lock, Loader2 } from "lucide-react";
 import WelcomeAuthLayout from "@/components/WelcomeAuthLayout";
-import GoogleIcon from "@/components/GoogleIcon";
-import { getPendingEmail } from "@/lib/guestStorage";
-import { consumeGuestRedirect } from "@/lib/guestRedirect";
+import { clearPendingAuberleInvite, getPendingAuberleInvite } from "@/lib/auberleInvite";
 
 export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState(() => location.state?.email || getPendingEmail());
+  const pendingInvite = getPendingAuberleInvite();
+  const invited = !!pendingInvite?.token;
+  const [email, setEmail] = useState(() => location.state?.email || pendingInvite?.email || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -22,9 +22,40 @@ export default function Register() {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errorField, setErrorField] = useState(null);
+  const [inviteChecked, setInviteChecked] = useState(false);
+  const [inviteValid, setInviteValid] = useState(false);
   const confirmPasswordRef = useRef(null);
   const privacyRef = useRef(null);
   const termsRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function validateInvite() {
+      if (!pendingInvite?.token) {
+        setInviteChecked(true);
+        return;
+      }
+
+      try {
+        const result = await base44.functions.invoke("claimOrgReferral", {
+          action: "preview",
+          token: pendingInvite.token,
+        });
+        const data = result?.data || result;
+        if (data?.error) throw new Error(data.error);
+        if (!cancelled) setInviteValid(true);
+      } catch {
+        clearPendingAuberleInvite();
+        if (!cancelled) setInviteValid(false);
+      } finally {
+        if (!cancelled) setInviteChecked(true);
+      }
+    }
+
+    validateInvite();
+    return () => { cancelled = true; };
+  }, [pendingInvite?.token]);
 
   const clearError = () => {
     if (error || errorField) {
@@ -53,19 +84,7 @@ export default function Register() {
     setLoading(true);
     try {
       await base44.auth.register({ email, password });
-      // Registration triggers a verification email. Transition to the
-      // dedicated verification screen — the account is unverified until the
-      // six-digit code is confirmed, so we must not attempt to sign in here.
-      // returnTo prefers explicit navigation state (e.g. a protected-route
-      // redirect), falling back to a guest's saved intended destination
-      // (e.g. "return to the resume I was trying to download") when no
-      // state was passed — GuestAccountPrompt and similar guest-gate entry
-      // points navigate here with no state at all, relying entirely on the
-      // storage-based mechanism, so this fallback is required for those
-      // paths to actually return the user where they meant to go.
-      const returnTo =
-        location.state?.from || location.state?.returnTo || consumeGuestRedirect();
-      navigate("/verify-email", { state: { email, returnTo } });
+      navigate("/verify-email", { state: { email } });
     } catch (err) {
       const msg = (err.message || "Registration failed").toLowerCase();
       if (msg.includes("already exists")) {
@@ -79,42 +98,32 @@ export default function Register() {
     }
   };
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/");
-  };
+  if (!inviteChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-7 h-7 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!invited || !inviteValid) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <WelcomeAuthLayout
-      eyebrow="Employment Readiness Platform"
+      eyebrow="Auberle Employment Institute"
       title="Create your account"
-      subtitle="Sign up to save your profile and sync it across devices."
+      subtitle="Create your account to continue with Auberle Employment Institute."
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">
+          <Link to="/login" state={{ email }} className="text-primary font-medium hover:underline">
             Log in
           </Link>
         </>
       }
     >
-      <Button
-        variant="outline"
-        className="w-full h-14 text-base font-semibold flex items-center justify-start mb-4"
-        onClick={handleGoogle}
-      >
-        <GoogleIcon className="w-5 h-5 mr-3" />
-        Continue with Google
-      </Button>
-
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-3 text-muted-foreground">or</span>
-        </div>
-      </div>
-
       <FormError id="register-error" className="mb-4">{error}</FormError>
 
       <form onSubmit={handleSubmit} className="space-y-4">

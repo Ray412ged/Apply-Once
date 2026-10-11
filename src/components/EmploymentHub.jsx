@@ -1,21 +1,16 @@
 import React, { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import GuidedForm from "@/components/GuidedForm";
 import EmploymentHistoryBuilder from "@/components/builder/EmploymentHistoryBuilder";
 import { base44 } from "@/api/base44Client";
-import { isGuest } from "@/lib/guestStorage";
 import { setProfileEntryMethod } from "@/lib/profileEntryMethod";
-import { updateProfileCompletion } from "@/lib/profileUtils";
 import {
   ChevronLeft,
   Plus,
   Trash2,
   Pencil,
   Upload,
-  FileText,
   Check,
-  X,
   Loader2,
   ArrowRight,
   AlertCircle,
@@ -24,7 +19,6 @@ import {
   Award,
   Wrench,
   CheckCheck,
-  UserPlus,
 } from "lucide-react";
 import ExtractedItemCard from "@/components/ExtractedItemCard";
 import { logCredentialEvent, setCredentialSource, setCredentialOrigin } from "@/lib/credentialDebugLog";
@@ -46,7 +40,6 @@ const EXPERIENCE_TYPES = [
 
 export default function EmploymentHub({
   records = [],
-  steps,
   onSave,
   onSaveEducation,
   onSaveCredential,
@@ -57,7 +50,6 @@ export default function EmploymentHub({
   onDelete,
   onExitNext,
   onPrev,
-  onExitProfile,
   title,
   nextSectionLabel,
   profileEntryMethod,
@@ -65,7 +57,6 @@ export default function EmploymentHub({
   const [mode, setMode] = useState("intro"); // "intro" | "list" | "form" | "saved" | "upload" | "no_experience"
   const [editingRecord, setEditingRecord] = useState(null);
   const [selectedExperienceType, setSelectedExperienceType] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const [extractedJobs, setExtractedJobs] = useState([]);
   const [extractedEducation, setExtractedEducation] = useState([]);
   const [extractedCredentials, setExtractedCredentials] = useState([]);
@@ -74,16 +65,13 @@ export default function EmploymentHub({
   const [educationSkipped, setEducationSkipped] = useState(false);
   const [formType, setFormType] = useState("employment");
   const [returnToReview, setReturnToReview] = useState(false);
-  const [extractionError, setExtractionError] = useState("");
   const [confirmedEducation, setConfirmedEducation] = useState([]);
   const [confirmedJobs, setConfirmedJobs] = useState([]);
   const [confirmedCredentials, setConfirmedCredentials] = useState([]);
   const [editingConfirmedEduIdx, setEditingConfirmedEduIdx] = useState(null);
   const [editingConfirmedJobIdx, setEditingConfirmedJobIdx] = useState(null);
   const [editingConfirmedCredIdx, setEditingConfirmedCredIdx] = useState(null);
-  const navigate = useNavigate();
   const [successMessage, setSuccessMessage] = useState("");
-  const confirmingEduRef = useRef(false);
   const confirmingRef = useRef(false);
   const [confirmingKey, setConfirmingKey] = useState(null);
   const [acceptingAll, setAcceptingAll] = useState(false);
@@ -135,7 +123,7 @@ export default function EmploymentHub({
             </button>
           )}
 
-          {records.length === 0 && profileEntryMethod !== "manual" && !isGuest() && (
+          {records.length === 0 && profileEntryMethod !== "manual" && (
             <button
               onClick={() => { setProfileEntryMethod("resume_import"); setMode("upload"); }}
               className="w-full bg-card rounded-2xl border-2 border-border p-5 text-left hover:border-primary/40 transition-colors"
@@ -150,24 +138,6 @@ export default function EmploymentHub({
                 </div>
               </div>
             </button>
-          )}
-
-          {records.length === 0 && profileEntryMethod !== "manual" && isGuest() && (
-            <div className="bg-accent rounded-2xl border border-primary/20 p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Upload className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Upload My Resume</p>
-                  <p className="text-sm text-muted-foreground">Create an account to upload your resume and we'll fill in your profile for you.</p>
-                </div>
-              </div>
-              <Button onClick={() => navigate("/register")} className="w-full h-12 font-semibold">
-                <UserPlus className="w-5 h-5 mr-1" />
-                Create an Account
-              </Button>
-            </div>
           )}
 
           {records.length === 0 && (
@@ -1115,37 +1085,6 @@ function UploadResumeFlow({ onBack, onDataExtracted }) {
               Upload and Extract
             </>
           )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ---- Sub-component: Extracted job card ----
-function ExtractedJobCard({ job, onConfirm, onEdit, onIgnore }) {
-  return (
-    <div className="bg-card rounded-2xl border border-border p-4">
-      <div className="flex items-start gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Briefcase className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-foreground">{job.job_title || "Unknown title"}</p>
-          <p className="text-sm text-muted-foreground">{job.employer_name || "Unknown employer"}</p>
-          {job.duties && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{job.duties}</p>}
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={onConfirm} className="h-9 flex-1">
-          <Check className="w-4 h-4 mr-1" />
-          Confirm
-        </Button>
-        <Button size="sm" variant="outline" onClick={onEdit} className="h-9 flex-1">
-          <Pencil className="w-4 h-4 mr-1" />
-          Edit
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onIgnore} className="h-9">
-          <X className="w-4 h-4" />
         </Button>
       </div>
     </div>

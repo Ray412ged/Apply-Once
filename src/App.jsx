@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import JobSeekerLayout from '@/components/JobSeekerLayout';
+import ParticipantRouteGuard from '@/components/ParticipantRouteGuard';
 import AdminLayout from '@/components/AdminLayout';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -23,35 +24,27 @@ import ApplicationWorkspace from '@/pages/ApplicationWorkspace';
 import Resume from '@/pages/Resume';
 import Applications from '@/pages/Applications';
 import More from '@/pages/More';
-import OrganizationConsent from '@/pages/OrganizationConsent';
-import SwipePreview from '@/pages/SwipePreview';
 import AdminDashboard from '@/pages/admin/Dashboard';
 import AdminJobPostings from '@/pages/admin/JobPostings';
 import AdminUsers from '@/pages/admin/Users';
 import AdminImportJobs from '@/pages/admin/ImportJobs';
 import AdminEmployerSources from '@/pages/admin/EmployerSources';
 import AdminAddLocalJob from '@/pages/admin/AddLocalJob';
-import AdminImportLocalJobs from '@/pages/admin/ImportLocalJobs';
 import AdminSearchRuns from '@/pages/admin/SearchRuns';
 import AdminSettings from '@/pages/admin/Settings';
 import AdminReusableAnswers from '@/pages/admin/ReusableAnswers';
 import AdminKnowledgeBase from '@/pages/admin/KnowledgeBase';
-import AdminOrganizations from '@/pages/admin/Organizations';
 import AdminParticipantLookup from '@/pages/admin/ParticipantLookup';
-import Welcome from '@/pages/Welcome';
 import OnboardingChoice from '@/pages/OnboardingChoice';
-import GuestIntroduction from '@/pages/GuestIntroduction';
-import EmailIdentity from '@/pages/EmailIdentity';
 import EmploymentHistoryBuilder from '@/components/builder/EmploymentHistoryBuilder';
 import ResumeUploadFlow from '@/components/builder/ResumeUploadFlow';
-import GuestMigrationChoice from '@/pages/GuestMigrationChoice';
 import OrgDashboard from '@/pages/OrgDashboard';
 import OrgOutcomesReport from '@/pages/OrgOutcomesReport';
 import OrgLayout from '@/components/organization/OrgLayout';
-import OrgPlaceholder from '@/pages/OrgPlaceholder';
 import OrgEmployers from '@/pages/OrgEmployers';
 import OrgOpportunities from '@/pages/OrgOpportunities';
-import { isGuest } from '@/lib/guestStorage';
+import OrgInvite from '@/pages/OrgInvite';
+import { useOrgStaffDestination } from '@/hooks/useOrgStaffDestination';
 
 const WorkspaceRedirect = () => {
   const { id } = useParams();
@@ -60,15 +53,27 @@ const WorkspaceRedirect = () => {
 
 const RootRedirect = () => {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
-  if (isLoadingAuth) {
+  const shouldCheckStaff = isAuthenticated && !isLoadingAuth && user?.role !== "admin";
+  const { loading: staffLoading, destination: staffDestination, error: staffError } =
+    useOrgStaffDestination(shouldCheckStaff);
+
+  if (isLoadingAuth || staffLoading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
       </div>
     );
   }
-  if (!isAuthenticated && !isGuest()) return <Navigate to="/welcome" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.role === "admin") return <Navigate to="/admin/dashboard" replace />;
+  if (staffError) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center p-6">
+        <p className="text-sm text-muted-foreground">{staffError}</p>
+      </div>
+    );
+  }
+  if (staffDestination) return <Navigate to={staffDestination} replace />;
   return <Navigate to="/home" replace />;
 };
 
@@ -99,17 +104,12 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       {/* Auth routes */}
-      <Route path="/welcome" element={<Welcome />} />
-      <Route path="/onboarding" element={<OnboardingChoice />} />
-      <Route path="/guest-intro" element={<GuestIntroduction />} />
-      <Route path="/onboarding/email" element={<EmailIdentity />} />
-      <Route path="/onboarding/build" element={<EmploymentHistoryBuilder />} />
-      <Route path="/onboarding/upload" element={<ResumeUploadFlow />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/invite/:token" element={<OrgInvite />} />
 
       {/* Backward-compat redirects to unified workspace */}
       <Route path="/scanner/:id" element={<WorkspaceRedirect />} />
@@ -119,43 +119,40 @@ const AuthenticatedApp = () => {
       {/* Root redirect */}
       <Route path="/" element={<RootRedirect />} />
 
-      {/* Temporary swipe card preview — not in main navigation */}
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/welcome" replace />} />}>
-        <Route path="/swipe-preview" element={<SwipePreview />} />
-      </Route>
-
-      {/* Job seeker routes */}
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/welcome" replace />} />}>
-        <Route path="/guest-migration" element={<GuestMigrationChoice />} />
-        <Route element={<JobSeekerLayout />}>
-          <Route path="/home" element={<Home />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/edit" element={<ProfileSection />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/jobs/:id" element={<JobDetail />} />
-          <Route path="/workspace/:id" element={<ApplicationWorkspace />} />
-          <Route path="/applications" element={<Applications />} />
-          <Route path="/more" element={<More />} />
-          <Route path="/organization-consent" element={<OrganizationConsent />} />
-          <Route path="/organization-consent/:orgId" element={<OrganizationConsent />} />
+      {/* Auberle participant routes. Authentication alone is not enough:
+          participants must have an active Auberle Employment Institute link. */}
+      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route element={<ParticipantRouteGuard />}>
+          <Route path="/onboarding" element={<OnboardingChoice />} />
+          <Route path="/onboarding/build" element={<EmploymentHistoryBuilder />} />
+          <Route path="/onboarding/upload" element={<ResumeUploadFlow />} />
+          <Route element={<JobSeekerLayout />}>
+            <Route path="/home" element={<Home />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/edit" element={<ProfileSection />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/workspace/:id" element={<ApplicationWorkspace />} />
+            <Route path="/applications" element={<Applications />} />
+            <Route path="/more" element={<More />} />
+          </Route>
+          <Route path="/resume" element={<Resume />} />
         </Route>
-        <Route path="/resume" element={<Resume />} />
       </Route>
 
-      {/* Organization Edition workspace. Backend functions enforce active
-          OrganizationStaffAccount membership and organization scoping. */}
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/welcome" replace />} />}>
+      {/* Auberle Employment Institute staff workspace. Internal organization
+          scoping remains a security boundary; this deployment serves Auberle only. */}
+      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/org/:slug" element={<OrgLayout />}>
           <Route index element={<OrgDashboard />} />
           <Route path="employers" element={<OrgEmployers />} />
           <Route path="opportunities" element={<OrgOpportunities />} />
           <Route path="outcomes" element={<OrgOutcomesReport />} />
-          <Route path="staff" element={<OrgPlaceholder />} />
         </Route>
       </Route>
 
       {/* Admin routes */}
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/welcome" replace />} />}>
+      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AdminLayout />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/jobs" element={<AdminJobPostings />} />
@@ -163,12 +160,10 @@ const AuthenticatedApp = () => {
           <Route path="/admin/import" element={<AdminImportJobs />} />
           <Route path="/admin/employer-sources" element={<AdminEmployerSources />} />
           <Route path="/admin/local-jobs/add" element={<AdminAddLocalJob />} />
-          <Route path="/admin/local-jobs/import" element={<AdminImportLocalJobs />} />
           <Route path="/admin/search-runs" element={<AdminSearchRuns />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/reusable-answers" element={<AdminReusableAnswers />} />
           <Route path="/admin/knowledge-base" element={<AdminKnowledgeBase />} />
-          <Route path="/admin/organizations" element={<AdminOrganizations />} />
           <Route path="/admin/participant-lookup" element={<AdminParticipantLookup />} />
         </Route>
       </Route>

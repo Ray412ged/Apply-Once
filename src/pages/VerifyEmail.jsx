@@ -6,13 +6,7 @@ import { Label } from "@/components/ui/label";
 import { FormError } from "@/components/ui/form-error";
 import { Loader2, RefreshCw, MailCheck } from "lucide-react";
 import WelcomeAuthLayout from "@/components/WelcomeAuthLayout";
-import {
-  isPending,
-  isGuest,
-  syncGuestToAccount,
-  setMigrationCompleted,
-  clearPendingEmail,
-} from "@/lib/guestStorage";
+import { completePendingAuberleInvite, getPendingAuberleInvite } from "@/lib/auberleInvite";
 
 // Cooldown (seconds) between Resend Code taps to prevent rapid repeated
 // requests.
@@ -39,8 +33,8 @@ function mapVerifyError(err) {
 export default function VerifyEmail() {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || "";
-  const returnTo = location.state?.returnTo || location.state?.from || "";
+  const pendingInvite = getPendingAuberleInvite();
+  const email = location.state?.email || pendingInvite?.email || "";
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -52,10 +46,10 @@ export default function VerifyEmail() {
   const inputRef = useRef(null);
   const cooldownTimer = useRef(null);
 
-  // If we somehow land here without an email, send the user back to register.
+  // If we somehow land here without an email, return to sign in.
   useEffect(() => {
     if (!email) {
-      navigate("/register", { replace: true });
+      navigate("/login", { replace: true });
       return;
     }
     const t = setTimeout(() => inputRef.current?.focus(), 50);
@@ -63,7 +57,6 @@ export default function VerifyEmail() {
       clearTimeout(t);
       clearInterval(cooldownTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email]);
 
   const startCooldown = useCallback(() => {
@@ -120,22 +113,20 @@ export default function VerifyEmail() {
       // Verification succeeded — authenticate the account now.
       base44.auth.setToken(access_token);
 
-      // Migrate any locally-built guest/pending profile only after the
-      // account is verified. Preserve guest information if migration fails
-      // (the user still continues into the app).
-      if (isPending() || isGuest()) {
-        try {
-          await syncGuestToAccount();
-          setMigrationCompleted();
-          clearPendingEmail();
-        } catch (syncErr) {
-          console.error("Failed to sync onboarding data:", syncErr);
-        }
-      }
+      try {
+        const inviteResult = await completePendingAuberleInvite();
 
-      // Hard redirect so the auth provider re-initializes with the new token.
-      // Falls back to "/" which routes to the home/admin dashboard.
-      window.location.href = returnTo || "/";
+        // Auberle invitation + verified email is the complete participant entry flow.
+        // Existing already-enrolled users without a pending invitation return normally.
+        window.location.href = inviteResult.completed ? "/onboarding" : "/";
+      } catch (inviteErr) {
+        setError(
+          inviteErr?.response?.data?.error ||
+          inviteErr?.message ||
+          "Your email is verified, but we could not complete your Auberle Employment Institute access. Please contact Auberle EI."
+        );
+        setLoading(false);
+      }
     } catch (err) {
       setError(mapVerifyError(err));
       setLoading(false);
@@ -150,7 +141,7 @@ export default function VerifyEmail() {
       await base44.auth.resendOtp(email);
       setResendMsg(`A new verification code was sent to ${email}.`);
       startCooldown();
-    } catch (err) {
+    } catch {
       setResendMsg("");
       setError("We could not send another code. Please try again.");
     } finally {
@@ -159,15 +150,12 @@ export default function VerifyEmail() {
   };
 
   const handleChangeEmail = () => {
-    // Return to registration to correct the address. This clears the
-    // in-memory verification state (code, errors, pending verification) on
-    // unmount but does NOT erase the active guest profile.
     navigate("/register", { state: { email } });
   };
 
   return (
     <WelcomeAuthLayout
-      eyebrow="Employment Readiness Platform"
+      eyebrow="Auberle Employment Institute"
       title="Verify your email"
       subtitle={`We sent a six-digit verification code to ${email}.`}
       footer={

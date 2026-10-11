@@ -124,15 +124,11 @@ export function calculateProfileCompletion(data) {
 
   // Normalize field names — accept both snapshot and legacy shapes
   const employmentRecords = data.employmentHistory || data.employmentRecords || [];
-  const educationRecords = data.education || data.educationRecords || [];
-  const credentials = data.certifications || data.credentials || [];
 
   const {
     profile,
     preferences,
     skills = [],
-    references = [],
-    documents = [],
   } = data;
 
   // Only core sections contribute to profile completion.

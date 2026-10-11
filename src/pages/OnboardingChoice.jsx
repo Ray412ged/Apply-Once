@@ -1,6 +1,5 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { ChevronLeft, Briefcase, Upload, User, Star, ArrowRight } from "lucide-react";
 
 export default function OnboardingChoice() {
@@ -45,7 +44,7 @@ export default function OnboardingChoice() {
       </div>
 
       <button
-        onClick={() => navigate("/welcome")}
+        onClick={() => navigate("/home")}
         className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground mb-6"
       >
         <ChevronLeft className="w-5 h-5" />

@@ -203,7 +203,7 @@ function readyRecommendation() {
   return {
     id: "explore-jobs",
     title: "Explore Your Job Matches",
-    description: "Your application profile is ready. Review local jobs matched to your information.",
+    description: "Your application profile is ready. Review jobs matched to your information.",
     route: "/jobs",
     sectionId: "jobs",
     priority: 4,

@@ -17,7 +17,6 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
-  Filter,
   Search,
 } from "lucide-react";
 

@@ -5,11 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PartyPopper, Briefcase, Loader2 } from "lucide-react";
 
-// Simple, participant-initiated employment confirmation. "Searching" ->
-// "Offer Accepted" with minimal, optional detail — no employer
-// verification, no complex workflow. Reversible: an accepted offer can
-// fall through, so participants can revert to Searching at any time from
-// the same card, no confirmation friction either direction.
+// Participant-owned profile status only. This does not create or verify
+// an Auberle Employment Institute hire outcome. EI staff record official hires
+// separately in the staff workspace.
 //
 // checkinMode / onStillSearching are optional and used only by the Phase 6
 // post-engagement follow-up (FollowupCheckinBanner) — same component, same
@@ -28,13 +26,13 @@ export default function EmploymentStatusCard({ profile, onUpdated, checkinMode =
   const handleConfirm = async () => {
     setSaving(true);
     try {
-      const updated = await base44.entities.UserProfile.update(profile.id, {
-        employment_status: "Offer Accepted",
-        current_employer_name: employer || null,
-        current_position_title: position || null,
-        offer_accepted_date: new Date().toISOString().slice(0, 10),
+      await base44.functions.invoke("updateMyEmploymentStatus", {
+        action: "employed",
+        employer_name: employer || "",
+        position_title: position || "",
       });
-      onUpdated?.(updated);
+      const profiles = await base44.entities.UserProfile.filter({}, "-created_date", 1);
+      onUpdated?.(profiles[0] || profile);
       setExpanded(false);
       if (checkinMode) onStillSearching?.(); // reuses the same "mark answered" callback
     } catch (err) {
@@ -56,10 +54,11 @@ export default function EmploymentStatusCard({ profile, onUpdated, checkinMode =
   const handleRevert = async () => {
     setSaving(true);
     try {
-      const updated = await base44.entities.UserProfile.update(profile.id, {
-        employment_status: "Searching",
+      await base44.functions.invoke("updateMyEmploymentStatus", {
+        action: "searching",
       });
-      onUpdated?.(updated);
+      const profiles = await base44.entities.UserProfile.filter({}, "-created_date", 1);
+      onUpdated?.(profiles[0] || profile);
     } catch (err) {
       console.error("Failed to revert employment status:", err);
     } finally {
@@ -100,8 +99,8 @@ export default function EmploymentStatusCard({ profile, onUpdated, checkinMode =
             <Briefcase className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="font-semibold text-foreground">I found a job!</p>
-            <p className="text-sm text-muted-foreground">Let us know — it only takes a moment.</p>
+            <p className="font-semibold text-foreground">My employment status</p>
+            <p className="text-sm text-muted-foreground">Update your profile if you found a job.</p>
           </div>
         </button>
         {checkinMode && (
@@ -121,7 +120,7 @@ export default function EmploymentStatusCard({ profile, onUpdated, checkinMode =
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
-      <p className="font-semibold text-foreground">Tell us about it (optional)</p>
+      <p className="font-semibold text-foreground">Update my employment status</p>
       <div className="space-y-2">
         <Label htmlFor="employer-name">Employer</Label>
         <Input id="employer-name" value={employer} onChange={(e) => setEmployer(e.target.value)} placeholder="Company name" />

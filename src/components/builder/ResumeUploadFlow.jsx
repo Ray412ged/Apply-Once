@@ -2,7 +2,6 @@ import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
-import { saveGuestSingle, bulkAddGuestRecords } from "@/lib/guestStorage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -146,47 +145,53 @@ export default function ResumeUploadFlow() {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const d = parsedData;
-    if (d.contact_info.first_name || d.contact_info.last_name || d.contact_info.email) {
-      saveGuestSingle("UserProfile", { ...d.contact_info, onboarding_status: "in_progress" });
+    try {
+      if (d.contact_info.first_name || d.contact_info.last_name || d.contact_info.email) {
+        const profiles = await base44.entities.UserProfile.filter({}, "-created_date", 1);
+        const profileData = { ...d.contact_info, onboarding_status: "in_progress" };
+        if (profiles[0]) await base44.entities.UserProfile.update(profiles[0].id, profileData);
+        else await base44.entities.UserProfile.create(profileData);
+      }
+
+      await Promise.all([
+        ...d.employment_history.map((e) => base44.entities.EmploymentRecord.create({
+          employer_name: e.employer_name || "",
+          job_title: e.job_title || "",
+          start_month: e.start_month || "",
+          start_year: e.start_year || "",
+          end_month: e.end_month || "",
+          end_year: e.end_year || "",
+          currently_employed: e.currently_employed || false,
+          duties: e.duties || "",
+          verified_status: "Document Extracted",
+        })),
+        ...d.skills.map((s) => base44.entities.Skill.create({
+          skill_name: s,
+          skill_category: "Other",
+          source: "Document Extracted",
+        })),
+        ...d.education.map((e) => base44.entities.EducationRecord.create({
+          institution_name: e.institution_name || "",
+          degree_or_credential: e.degree_or_credential || "",
+          field_of_study: e.field_of_study || "",
+          graduation_year: e.graduation_year || "",
+          verified_status: "Document Extracted",
+        })),
+        ...d.certifications.map((c) => base44.entities.Credential.create({
+          credential_name: c.credential_name || "",
+          issuing_organization: c.issuing_organization || "",
+          credential_type: "Certification",
+          verified_status: "Document Extracted",
+        })),
+      ]);
+      setStep("complete");
+    } catch (err) {
+      console.error("Failed to save parsed resume data:", err);
+      setParseError("We read your resume but could not save the information. Please try again.");
+      setStep("review");
     }
-    if (d.employment_history.length > 0) {
-      bulkAddGuestRecords("EmploymentRecord", d.employment_history.map((e) => ({
-        employer_name: e.employer_name || "",
-        job_title: e.job_title || "",
-        start_month: e.start_month || "",
-        start_year: e.start_year || "",
-        end_month: e.end_month || "",
-        end_year: e.end_year || "",
-        currently_employed: e.currently_employed || false,
-        duties: e.duties || "",
-        verified_status: "Document Extracted",
-      })));
-    }
-    if (d.skills.length > 0) {
-      bulkAddGuestRecords("Skill", d.skills.map((s) => ({
-        skill_name: s, skill_category: "Other", source: "Document Extracted",
-      })));
-    }
-    if (d.education.length > 0) {
-      bulkAddGuestRecords("EducationRecord", d.education.map((e) => ({
-        institution_name: e.institution_name || "",
-        degree_or_credential: e.degree_or_credential || "",
-        field_of_study: e.field_of_study || "",
-        graduation_year: e.graduation_year || "",
-        verified_status: "Document Extracted",
-      })));
-    }
-    if (d.certifications.length > 0) {
-      bulkAddGuestRecords("Credential", d.certifications.map((c) => ({
-        credential_name: c.credential_name || "",
-        issuing_organization: c.issuing_organization || "",
-        credential_type: "Certification",
-        verified_status: "Document Extracted",
-      })));
-    }
-    setStep("complete");
   };
 
   // --- Helpers for editing parsed data ---
@@ -244,21 +249,11 @@ export default function ResumeUploadFlow() {
               </div>
             ))}
           </div>
-          <div className="bg-primary/5 rounded-xl border border-primary/15 p-4 mb-8">
-            <p className="text-sm text-foreground leading-relaxed">
-              To securely save your work and continue using Apply Once, create your free account.
-            </p>
-          </div>
         </div>
-        <div className="space-y-2">
-          <Button onClick={() => navigate("/profile/edit?section=about")} className="w-full h-14 text-base font-semibold">
-            Continue Building My Profile
-            <ArrowRight className="w-5 h-5 ml-1" />
-          </Button>
-          <Button onClick={() => navigate("/register")} variant="outline" className="w-full h-12 font-semibold">
-            Create Free Account
-          </Button>
-        </div>
+        <Button onClick={() => navigate("/profile/edit?section=about")} className="w-full h-14 text-base font-semibold">
+          Continue Building My Profile
+          <ArrowRight className="w-5 h-5 ml-1" />
+        </Button>
       </div>
     );
   }
@@ -315,7 +310,7 @@ export default function ResumeUploadFlow() {
                 </div>
                 <h1 className="text-2xl font-bold text-foreground mb-2">Upload Your Resume</h1>
                 <p className="text-muted-foreground text-sm mb-1">Already have a resume? We'll import it and review it with you.</p>
-                <p className="text-primary text-xs font-medium mb-6">No account required</p>
+                <p className="text-primary text-xs font-medium mb-6">Your information will be saved to your Apply Once account.</p>
 
                 {parseError && (
                   <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 mb-4 flex items-start gap-2">

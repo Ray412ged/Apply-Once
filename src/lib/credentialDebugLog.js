@@ -25,10 +25,6 @@ export function setCredentialSource(component, fn) {
   _sourceFunction = fn;
 }
 
-export function getCredentialOrigin() {
-  return _origin || "Manual Profile Edit";
-}
-
 // ---- Store ----
 
 export function getCredentialDebugLog() {

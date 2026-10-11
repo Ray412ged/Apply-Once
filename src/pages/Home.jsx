@@ -3,15 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useProfileData, useInvalidateProfileData } from "@/hooks/useProfileData";
-import {
-  isGuest,
-  hasGuestData,
-  hasMigrationCompleted,
-  isPending,
-  syncGuestToAccount,
-  setMigrationCompleted,
-  clearPendingEmail,
-} from "@/lib/guestStorage";
+import { useSavedJobs } from "@/hooks/useSavedJobs";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { runEngine } from "@/lib/readiness/engine";
 import NextStepCard from "@/components/dashboard/NextStepCard";
@@ -23,24 +15,22 @@ import OptionalEnhancementsCard from "@/components/command-center/OptionalEnhanc
 import ProgressSummary from "@/components/command-center/ProgressSummary";
 import ResumeStatusCard from "@/components/resume/ResumeStatusCard";
 import ResumeCelebration from "@/components/resume/ResumeCelebration";
-import EmploymentStatusCard from "@/components/dashboard/EmploymentStatusCard";
-import FollowupCheckinBanner from "@/components/dashboard/FollowupCheckinBanner";
+
 import { generateResume } from "@/lib/resume/resumeGenerator";
 import {
   getResumeStatus,
   hasResumeCelebrationBeenShown,
   markResumeCelebrationShown,
 } from "@/lib/resume/resumeStorage";
-import { UserCheck, Briefcase, Bookmark, Bell, ArrowRight } from "lucide-react";
+import { UserCheck, Bookmark, Bell, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: profileData, isLoading: profileLoading } = useProfileData();
+  const { data: savedJobRecords = [] } = useSavedJobs();
   const invalidateProfileData = useInvalidateProfileData();
   const [loading, setLoading] = useState(true);
-  const [newMatches, setNewMatches] = useState([]);
-  const [savedJobs, setSavedJobs] = useState(0);
   const [activeApps, setActiveApps] = useState([]);
   const [followUps, setFollowUps] = useState([]);
 
@@ -49,22 +39,6 @@ export default function Home() {
 
     async function loadData() {
       try {
-        if (!isGuest() && hasGuestData() && !hasMigrationCompleted()) {
-          if (isPending()) {
-            try {
-              await syncGuestToAccount();
-              setMigrationCompleted();
-              clearPendingEmail();
-              invalidateProfileData();
-            } catch (syncErr) {
-              console.error("Failed to sync onboarding data:", syncErr);
-            }
-            return;
-          }
-          navigate("/guest-migration", { replace: true });
-          return;
-        }
-
         if (!profileData.profile) {
           try {
             await base44.entities.UserProfile.create({
@@ -83,16 +57,18 @@ export default function Home() {
           return;
         }
 
-        const [matches, applications] = await Promise.all([
-          base44.entities.JobMatch.filter({}, "-created_date", 50),
-          base44.entities.Application.filter({}, "-created_date", 50),
-        ]);
-
-        setNewMatches(matches.filter((m) => m.status === "New"));
-        setSavedJobs(matches.filter((m) => m.status === "Saved").length);
+        const applications = await base44.entities.Application.filter({}, "-created_date", 50);
         setActiveApps(
           applications.filter((a) =>
-            ["Interested", "Preparing", "Ready for Review"].includes(a.status)
+            [
+              "Interested",
+              "Preparing",
+              "Ready for Review",
+              "Readiness Started",
+              "Needs Information",
+              "Ready to Apply",
+              "Application Started",
+            ].includes(a.status)
           )
         );
 
@@ -120,29 +96,29 @@ export default function Home() {
 
   // Live resume model — derived from the same profile data, memoized so it
   // is not regenerated on unrelated renders.
-  const guest = isGuest();
   const resume = useMemo(
     () => (profileData?.profile ? generateResume(profileData) : null),
     [profileData]
   );
   const resumeStatus = resume
-    ? getResumeStatus(resume, user, guest, profileData?.profile?.last_resume_signature)
+    ? getResumeStatus(resume, user, profileData?.profile?.last_resume_signature)
     : "not_ready";
   const [celebrationVisible, setCelebrationVisible] = useState(false);
-  const [followupDue, setFollowupDue] = useState(false);
   useEffect(() => {
-    if (resume?.canGenerate && !hasResumeCelebrationBeenShown(user, guest)) {
+    if (resume?.canGenerate && !hasResumeCelebrationBeenShown(user)) {
       setCelebrationVisible(true);
     }
-  }, [resume, user, guest]);
+  }, [resume, user]);
   const dismissCelebration = () => {
     setCelebrationVisible(false);
-    markResumeCelebrationShown(user, guest);
+    markResumeCelebrationShown(user);
   };
 
   if (loading || profileLoading) {
     return <DashboardSkeleton />;
   }
+
+  const savedJobs = savedJobRecords.length;
 
   const firstName =
     profileData?.profile?.preferred_name || profileData?.profile?.first_name || "there";
@@ -168,23 +144,6 @@ export default function Home() {
         sectionStatuses={sectionStatuses}
         completion={completion}
       />
-
-      {/* Employment confirmation — participant-initiated, reversible.
-          If a consented post-engagement follow-up is due, that card takes
-          over entirely (it already includes the same "I found a job!"
-          option plus "Still searching") rather than showing both. */}
-      {profileData?.profile && (
-        <>
-          <FollowupCheckinBanner
-            profile={profileData.profile}
-            onUpdated={invalidateProfileData}
-            onDueChange={setFollowupDue}
-          />
-          {!followupDue && (
-            <EmploymentStatusCard profile={profileData.profile} onUpdated={invalidateProfileData} />
-          )}
-        </>
-      )}
 
       {/* One-time resume-ready accomplishment */}
       <ResumeCelebration visible={celebrationVisible} onDismiss={dismissCelebration} />
@@ -231,19 +190,6 @@ export default function Home() {
       <section aria-label="Job activity">
         <h2 className="text-lg font-bold text-foreground mb-3">Job Activity</h2>
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => navigate("/jobs")}
-            className="bg-card rounded-2xl border border-border p-4 text-left hover:shadow-md transition-shadow"
-          >
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
-              <Briefcase className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-2xl font-bold text-foreground">{newMatches.length}</p>
-            <p className="text-sm text-muted-foreground">
-              {newMatches.length === 1 ? "new job match" : "new job matches"}
-            </p>
-          </button>
-
           <button
             onClick={() => navigate("/jobs")}
             className="bg-card rounded-2xl border border-border p-4 text-left hover:shadow-md transition-shadow"

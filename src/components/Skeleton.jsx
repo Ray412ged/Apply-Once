@@ -4,40 +4,6 @@ export function Skeleton({ className }) {
   return <div className={cn("animate-pulse rounded-md bg-muted", className)} />;
 }
 
-export function DiscoveryCardSkeleton() {
-  return (
-    <div role="status" aria-live="polite">
-      <span className="sr-only">Loading job recommendations, please wait.</span>
-      <div aria-hidden="true" className="max-w-md mx-auto bg-card rounded-3xl border border-border shadow-lg overflow-hidden">
-        <div className="p-5 pb-3 flex items-center gap-3">
-          <Skeleton className="w-12 h-12 rounded-xl" />
-          <div className="space-y-2 flex-1">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-5 w-16 rounded-full" />
-          </div>
-        </div>
-        <div className="px-5 pb-3 space-y-2">
-          <Skeleton className="h-6 w-3/4" />
-        </div>
-        <div className="px-5 pb-3 flex gap-2">
-          <Skeleton className="h-7 w-20 rounded-full" />
-          <Skeleton className="h-7 w-16 rounded-full" />
-          <Skeleton className="h-7 w-24 rounded-full" />
-        </div>
-        <div className="px-5 pb-5 space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-        </div>
-        <div className="px-5 pb-5 grid grid-cols-3 gap-2">
-          <Skeleton className="h-12 rounded-2xl" />
-          <Skeleton className="h-12 rounded-2xl" />
-          <Skeleton className="h-12 rounded-2xl" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function JobListSkeleton({ count = 4 }) {
   return (
     <div className="space-y-3" role="status" aria-live="polite">

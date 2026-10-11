@@ -19,11 +19,12 @@ import {
   Mail,
   Phone,
   CheckCircle,
-  AlertTriangle,
   Info,
 } from "lucide-react";
 import { stripHtml } from "@/lib/htmlUtils";
 import { getOrCreatePassAction } from "@/lib/dismissedJobs";
+import { getOrCreateSavedJob, removeSavedJob } from "@/lib/savedJobs";
+import { useSavedJobs } from "@/hooks/useSavedJobs";
 import { getJobForMe } from "@/lib/orgJobs";
 
 function formatPay(job) {
@@ -40,6 +41,7 @@ export default function JobDetail() {
   const [job, setJob] = useState(null);
   const [match, setMatch] = useState(null);
   const { data: profileData, isLoading: profileLoading } = useProfileData();
+  const { data: savedJobs = [] } = useSavedJobs();
   const [actionLoading, setActionLoading] = useState(false);
   const [existingApplication, setExistingApplication] = useState(null);
 
@@ -101,6 +103,23 @@ export default function JobDetail() {
       }
     } catch (err) {
       console.error("Failed to update match:", err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const isSaved = savedJobs.some((saved) => saved.job_posting_id === id);
+
+  const handleToggleSave = async () => {
+    setActionLoading(true);
+    try {
+      if (isSaved) {
+        await removeSavedJob(id);
+      } else {
+        await getOrCreateSavedJob(id);
+      }
+    } catch (err) {
+      console.error("Failed to save job:", err);
     } finally {
       setActionLoading(false);
     }
@@ -312,11 +331,11 @@ export default function JobDetail() {
             variant="outline"
             size="sm"
             className="h-12 px-3"
-            onClick={() => updateMatchStatus(match?.status === "Saved" ? "Viewed" : "Saved")}
+            onClick={handleToggleSave}
             disabled={actionLoading}
-            aria-label="Save"
+            aria-label={isSaved ? "Remove saved job" : "Save job"}
           >
-            <Bookmark className={`w-5 h-5 ${match?.status === "Saved" ? "fill-current" : ""}`} />
+            <Bookmark className={`w-5 h-5 ${isSaved ? "fill-current" : ""}`} />
           </Button>
           <Button
             variant="ghost"
@@ -335,7 +354,7 @@ export default function JobDetail() {
             disabled={actionLoading}
           >
             <FileCheck className="w-5 h-5 mr-1" />
-            Open Application Workspace
+            {existingApplication ? "Continue Application" : "Start Application"}
           </Button>
         </div>
       </div>

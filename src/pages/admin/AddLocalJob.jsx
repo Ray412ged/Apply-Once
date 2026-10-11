@@ -167,7 +167,7 @@ export default function AddLocalJob() {
           <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-3">
             <Check className="w-8 h-8 text-success" />
           </div>
-          <h2 className="text-xl font-bold text-foreground">Job saved to your profile.</h2>
+          <h2 className="text-xl font-bold text-foreground">Job saved to the Jobs board.</h2>
           <p className="text-sm text-muted-foreground mt-1">What would you like to do next?</p>
         </div>
         <div className="space-y-2">
@@ -243,8 +243,8 @@ export default function AddLocalJob() {
         <ChevronLeft className="w-5 h-5" /> Back
       </button>
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Add Local Job</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Create a job posting for a local employer.</p>
+        <h1 className="text-2xl font-bold text-foreground">Add Job</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">Add a job to the Auberle Employment Institute Jobs board.</p>
       </div>
 
       <div className="bg-accent/40 rounded-xl border border-border p-3 space-y-2">

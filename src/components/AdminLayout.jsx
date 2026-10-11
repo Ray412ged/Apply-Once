@@ -1,12 +1,11 @@
 import React, { useState } from "react";
-import { Outlet, NavLink, Navigate, useLocation } from "react-router-dom";
+import { Outlet, NavLink, Navigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import {
   LayoutDashboard,
   FileText,
   Building2,
   Plus,
-  FileSpreadsheet,
   Users,
   Upload,
   Search,
@@ -17,7 +16,6 @@ import {
   X,
   LogOut,
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 
 const navItems = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,19 +23,16 @@ const navItems = [
   { to: "/admin/import", label: "Import Jobs", icon: Upload },
   { to: "/admin/employer-sources", label: "Employer Sources", icon: Building2 },
   { to: "/admin/local-jobs/add", label: "Add Local Job", icon: Plus },
-  { to: "/admin/local-jobs/import", label: "Import Local Jobs", icon: FileSpreadsheet },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/search-runs", label: "Search Runs", icon: Search },
   { to: "/admin/reusable-answers", label: "Reusable Answers", icon: MessageSquare },
   { to: "/admin/knowledge-base", label: "Knowledge Base", icon: BookOpen },
-  { to: "/admin/organizations", label: "Organizations", icon: Building2 },
   { to: "/admin/participant-lookup", label: "Participant Lookup", icon: Search },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Redirect non-admins to home
@@ -58,7 +53,7 @@ export default function AdminLayout() {
           </div>
           <div>
             <p className="font-heading font-bold text-foreground leading-tight">Apply Once</p>
-            <p className="text-xs text-muted-foreground">Admin Panel</p>
+            <p className="text-xs text-muted-foreground">Customer Deployment Admin</p>
           </div>
         </div>
       </div>
@@ -132,7 +127,7 @@ export default function AdminLayout() {
           >
             <Menu className="w-6 h-6 text-foreground" />
           </button>
-          <span className="font-heading font-bold text-foreground">Admin Panel</span>
+          <span className="font-heading font-bold text-foreground">Deployment Admin</span>
           <div className="w-10" />
         </header>
 
