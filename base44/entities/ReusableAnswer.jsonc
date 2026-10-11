@@ -1,0 +1,77 @@
+{
+  "name": "ReusableAnswer",
+  "type": "object",
+  "properties": {
+    "question": {
+      "type": "string"
+    },
+    "answer": {
+      "type": "string"
+    },
+    "question_type": {
+      "type": "string",
+      "enum": [
+        "Motivation",
+        "Strengths",
+        "Weaknesses",
+        "Availability",
+        "Leadership",
+        "Conflict",
+        "Customer Service",
+        "Safety",
+        "Career Goals",
+        "Problem Solving",
+        "Teamwork",
+        "Background",
+        "Experience",
+        "Education",
+        "General"
+      ],
+      "default": "General"
+    },
+    "employer": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "favorite": {
+      "type": "boolean",
+      "default": false
+    },
+    "times_used": {
+      "type": "number",
+      "default": 0
+    },
+    "last_used": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ai_generated": {
+      "type": "boolean",
+      "default": false
+    },
+    "user_confirmed": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "question",
+    "answer"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "name": "JobPreference",
+  "type": "object",
+  "properties": {
+    "work_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "work_types_enjoyed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "desired_job_titles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "desired_industries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "desired_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "excluded_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "experience_level": {
+      "type": "string",
+      "enum": [
+        "No experience",
+        "Less than 1 year",
+        "1\u20133 years",
+        "3\u20135 years",
+        "5\u201310 years",
+        "10+ years"
+      ]
+    },
+    "available_days": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "available_times": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "earliest_start_date": {
+      "type": "string"
+    },
+    "pay_preference": {
+      "type": "string",
+      "enum": [
+        "Under $15/hour",
+        "$15\u201320/hour",
+        "$20\u201325/hour",
+        "$25\u201330/hour",
+        "$30\u201340/hour",
+        "$40+/hour",
+        "I'm flexible for the right opportunity"
+      ]
+    },
+    "workplace_accommodation": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Prefer not to answer"
+      ]
+    },
+    "travel_radius_miles": {
+      "type": "number"
+    },
+    "remote_preference": {
+      "type": "string",
+      "enum": [
+        "Remote only",
+        "Remote preferred",
+        "Hybrid",
+        "On-site only",
+        "No preference"
+      ],
+      "default": "No preference"
+    },
+    "employment_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Full-time",
+          "Part-time",
+          "Temporary",
+          "Contract",
+          "Seasonal"
+        ]
+      }
+    },
+    "preferred_schedule": {
+      "type": "string",
+      "enum": [
+        "Day",
+        "Evening",
+        "Night",
+        "Weekend",
+        "Flexible",
+        "Any"
+      ],
+      "default": "Any"
+    },
+    "minimum_hourly_pay": {
+      "type": "number"
+    },
+    "minimum_annual_salary": {
+      "type": "number"
+    },
+    "willing_to_travel": {
+      "type": "boolean"
+    },
+    "willing_to_relocate": {
+      "type": "boolean"
+    },
+    "transportation_available": {
+      "type": "boolean"
+    },
+    "active_search": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

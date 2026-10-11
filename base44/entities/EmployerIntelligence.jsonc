@@ -1,0 +1,242 @@
+{
+  "name": "EmployerIntelligence",
+  "type": "object",
+  "properties": {
+    "employer_name": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "ats_platform": {
+      "type": "string"
+    },
+    "career_site_url": {
+      "type": "string"
+    },
+    "job_url": {
+      "type": "string"
+    },
+    "job_title": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "date_validated": {
+      "type": "string",
+      "format": "date"
+    },
+    "validation_status": {
+      "type": "string",
+      "enum": [
+        "Not Started",
+        "In Progress",
+        "Validated",
+        "Needs Review"
+      ],
+      "default": "Not Started"
+    },
+    "account_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "returning_login_available": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "email_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "password_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "security_questions_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "email_verification_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "phone_verification_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "resume_import_available": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "social_login_available": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "eeo_collected": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "veteran_status_collected": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "disability_status_collected": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "wotc_collected": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "background_authorization_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "applicant_certification_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "estimated_completion_minutes": {
+      "type": "number"
+    },
+    "number_of_steps": {
+      "type": "number"
+    },
+    "resume_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "manual_work_history_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "references_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "assessment_required": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "assessment_length_minutes": {
+      "type": "number"
+    },
+    "friction_score": {
+      "type": "number"
+    },
+    "observations": {
+      "type": "string"
+    },
+    "evidence_status": {
+      "type": "string",
+      "enum": [
+        "Observed",
+        "Inferred",
+        "Unknown"
+      ],
+      "default": "Unknown"
+    }
+  },
+  "required": [
+    "employer_name"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

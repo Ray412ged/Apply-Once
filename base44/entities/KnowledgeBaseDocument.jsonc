@@ -1,0 +1,79 @@
+{
+  "name": "KnowledgeBaseDocument",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "folder": {
+      "type": "string",
+      "enum": [
+        "Vision",
+        "Design System",
+        "Architecture",
+        "AI Prompts",
+        "Employer Integrations",
+        "ATS Documentation",
+        "Roadmap",
+        "Release Notes",
+        "Meeting Notes",
+        "Research"
+      ],
+      "default": "Vision"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Published",
+        "Archived"
+      ],
+      "default": "Draft"
+    },
+    "author": {
+      "type": "string"
+    },
+    "file_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "title",
+    "folder",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

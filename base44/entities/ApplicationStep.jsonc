@@ -1,0 +1,98 @@
+{
+  "name": "ApplicationStep",
+  "type": "object",
+  "properties": {
+    "employer_intelligence_id": {
+      "type": "string"
+    },
+    "step_number": {
+      "type": "number"
+    },
+    "step_name": {
+      "type": "string"
+    },
+    "progress_percentage": {
+      "type": "number"
+    },
+    "description": {
+      "type": "string"
+    },
+    "required_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "optional_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "employer_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ats_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "documents_requested": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "save_and_finish_later": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "Unknown"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    },
+    "evidence_status": {
+      "type": "string",
+      "enum": [
+        "Observed",
+        "Inferred",
+        "Unknown"
+      ],
+      "default": "Unknown"
+    }
+  },
+  "required": [
+    "employer_intelligence_id",
+    "step_number",
+    "step_name"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
