@@ -1,0 +1,99 @@
+{
+  "name": "JobMatch",
+  "type": "object",
+  "properties": {
+    "job_posting_id": {
+      "type": "string"
+    },
+    "overall_score": {
+      "type": "number"
+    },
+    "qualification_score": {
+      "type": "number"
+    },
+    "experience_score": {
+      "type": "number"
+    },
+    "skills_score": {
+      "type": "number"
+    },
+    "education_score": {
+      "type": "number"
+    },
+    "credential_score": {
+      "type": "number"
+    },
+    "preference_score": {
+      "type": "number"
+    },
+    "match_level": {
+      "type": "string",
+      "enum": [
+        "Strong Match",
+        "Possible Match",
+        "Stretch Opportunity",
+        "Review Needed"
+      ],
+      "default": "Review Needed"
+    },
+    "match_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "possible_concerns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_requirements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "New",
+        "Viewed",
+        "Saved",
+        "Not Interested",
+        "Preparing Application",
+        "Applied",
+        "Archived"
+      ],
+      "default": "New"
+    },
+    "first_matched_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_reviewed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "user_feedback": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_posting_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

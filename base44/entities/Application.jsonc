@@ -1,0 +1,122 @@
+{
+  "name": "Application",
+  "type": "object",
+  "properties": {
+    "job_posting_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Interested",
+        "Readiness Started",
+        "Needs Information",
+        "Ready to Apply",
+        "Preparing",
+        "Ready for Review",
+        "Application Started",
+        "Submitted",
+        "Interview",
+        "Offer",
+        "Not Selected",
+        "Rejected",
+        "Withdrawn",
+        "Closed"
+      ],
+      "default": "Interested"
+    },
+    "application_started_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "application_submitted_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "submission_method": {
+      "type": "string",
+      "enum": [
+        "External Link",
+        "Manual Entry",
+        "Other"
+      ]
+    },
+    "ats_type": {
+      "type": "string"
+    },
+    "resume_document_id": {
+      "type": "string"
+    },
+    "cover_letter_document_id": {
+      "type": "string"
+    },
+    "prepared_answers": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "follow_up_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "interview_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "outcome": {
+      "type": "string"
+    },
+    "readiness_score": {
+      "type": "number"
+    },
+    "ready_items": {
+      "type": "string"
+    },
+    "needs_review_items": {
+      "type": "string"
+    },
+    "missing_items": {
+      "type": "string"
+    },
+    "optional_items": {
+      "type": "string"
+    },
+    "scanner_answers": {
+      "type": "string"
+    },
+    "cover_letter_status": {
+      "type": "string"
+    },
+    "cover_letter_signature": {
+      "type": "string"
+    },
+    "employer_name": {
+      "type": "string"
+    },
+    "job_title": {
+      "type": "string"
+    },
+    "job_url": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_posting_id",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

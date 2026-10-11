@@ -35,17 +35,35 @@ export default async function(req) {
       allowed = !job.organization_id && job.status === "Active" && stillOpen;
     }
 
-    // A user may reopen a job behind their own historical application even
-    // after the posting is no longer active. This preserves application history
-    // without exposing a different org's live opportunity feed.
+    // Historical application access is narrower than live opportunity
+    // visibility. Public jobs remain available to the applicant. Org-owned
+    // jobs are only returned when the participant had a real connection to
+    // that organization on or before the application was created.
     if (!allowed && user) {
       const apps = await svc.entities.Application.filter(
         { created_by_id: user.id, job_posting_id: id },
         "-created_date",
         1
       );
-      if (apps.length > 0) {
-        allowed = true;
+
+      const application = apps[0] || null;
+      if (application) {
+        if (!job.organization_id) {
+          allowed = true;
+        } else {
+          const historicalLinks = await svc.entities.ParticipantOrgLink.filter(
+            { participant_id: user.id, organization_id: job.organization_id },
+            "-linked_at",
+            50
+          );
+          const applicationTime = new Date(application.created_date).getTime();
+          allowed = historicalLinks.some((link) => {
+            const linkedTime = new Date(link.linked_at).getTime();
+            return Number.isFinite(applicationTime) &&
+              Number.isFinite(linkedTime) &&
+              linkedTime <= applicationTime;
+          });
+        }
       }
     }
 

@@ -1,0 +1,87 @@
+{
+  "name": "EmployerCache",
+  "type": "object",
+  "properties": {
+    "place_id": {
+      "type": "string"
+    },
+    "employer_name": {
+      "type": "string"
+    },
+    "street_address": {
+      "type": "string"
+    },
+    "address_line_2": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "postal_code": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "latitude": {
+      "type": "number"
+    },
+    "longitude": {
+      "type": "number"
+    },
+    "employer_type": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "common_job_titles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "times_selected": {
+      "type": "number",
+      "default": 0
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "Google Places",
+        "User Entered",
+        "Manual"
+      ],
+      "default": "Google Places"
+    },
+    "last_looked_up": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "place_id",
+    "employer_name"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

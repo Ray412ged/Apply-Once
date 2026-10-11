@@ -1,0 +1,36 @@
+{
+  "name": "JobSwipeAction",
+  "type": "object",
+  "properties": {
+    "job_posting_id": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "save",
+        "interested"
+      ],
+      "default": "pass"
+    }
+  },
+  "required": [
+    "job_posting_id",
+    "action"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

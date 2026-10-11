@@ -1,0 +1,47 @@
+{
+  "name": "ParticipantActivityEvent",
+  "type": "object",
+  "properties": {
+    "participant_id": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "login",
+        "profile_section_completed",
+        "resume_generated",
+        "application_submitted"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "participant_id",
+    "event_type",
+    "timestamp"
+  ],
+  "rls": {
+    "read": {
+      "data.participant_id": "{{user.id}}"
+    },
+    "create": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
