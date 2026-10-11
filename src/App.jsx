@@ -50,6 +50,7 @@ import OrgOutcomesReport from '@/pages/OrgOutcomesReport';
 import OrgLayout from '@/components/organization/OrgLayout';
 import OrgPlaceholder from '@/pages/OrgPlaceholder';
 import OrgEmployers from '@/pages/OrgEmployers';
+import OrgOpportunities from '@/pages/OrgOpportunities';
 import { isGuest } from '@/lib/guestStorage';
 
 const WorkspaceRedirect = () => {
@@ -147,7 +148,7 @@ const AuthenticatedApp = () => {
         <Route path="/org/:slug" element={<OrgLayout />}>
           <Route index element={<OrgDashboard />} />
           <Route path="employers" element={<OrgEmployers />} />
-          <Route path="opportunities" element={<OrgPlaceholder />} />
+          <Route path="opportunities" element={<OrgOpportunities />} />
           <Route path="outcomes" element={<OrgOutcomesReport />} />
           <Route path="staff" element={<OrgPlaceholder />} />
         </Route>
