@@ -26,19 +26,24 @@ export default async function(req) {
     let allowed = false;
 
     if (orgContext) {
-      allowed =
+      const organizationPublished =
         job.organization_id === orgContext.organizationId &&
         job.verification_status === "Verified" &&
-        job.status === "Active" &&
-        stillOpen;
+        job.status === "Active";
+
+      const sharedLocal =
+        !job.organization_id &&
+        job.local_job === true &&
+        job.administrator_verified === true &&
+        job.status === "Active";
+
+      allowed = (organizationPublished || sharedLocal) && stillOpen;
     } else {
-      allowed = !job.organization_id && job.status === "Active" && stillOpen;
+      allowed = false;
     }
 
-    // Historical application access is narrower than live opportunity
-    // visibility. Public jobs remain available to the applicant. Org-owned
-    // jobs are only returned when the participant had a real connection to
-    // that organization on or before the application was created.
+    // Historical application access remains available when the participant
+    // had a real organization connection on or before the application was created.
     if (!allowed && user) {
       const apps = await svc.entities.Application.filter(
         { created_by_id: user.id, job_posting_id: id },
@@ -47,23 +52,19 @@ export default async function(req) {
       );
 
       const application = apps[0] || null;
-      if (application) {
-        if (!job.organization_id) {
-          allowed = true;
-        } else {
-          const historicalLinks = await svc.entities.ParticipantOrgLink.filter(
-            { participant_id: user.id, organization_id: job.organization_id },
-            "-linked_at",
-            50
-          );
-          const applicationTime = new Date(application.created_date).getTime();
-          allowed = historicalLinks.some((link) => {
-            const linkedTime = new Date(link.linked_at).getTime();
-            return Number.isFinite(applicationTime) &&
-              Number.isFinite(linkedTime) &&
-              linkedTime <= applicationTime;
-          });
-        }
+      if (application && job.organization_id) {
+        const historicalLinks = await svc.entities.ParticipantOrgLink.filter(
+          { participant_id: user.id, organization_id: job.organization_id },
+          "-linked_at",
+          50
+        );
+        const applicationTime = new Date(application.created_date).getTime();
+        allowed = historicalLinks.some((link) => {
+          const linkedTime = new Date(link.linked_at).getTime();
+          return Number.isFinite(applicationTime) &&
+            Number.isFinite(linkedTime) &&
+            linkedTime <= applicationTime;
+        });
       }
     }
 
