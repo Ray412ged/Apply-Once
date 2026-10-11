@@ -1,0 +1,76 @@
+{
+  "name": "OrgParticipantReferral",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string"
+    },
+    "participant_name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "referring_staff": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Invited",
+        "Joined"
+      ],
+      "default": "Invited"
+    },
+    "invite_token_hash": {
+      "type": "string"
+    },
+    "invite_created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "participant_id": {
+      "type": "string"
+    },
+    "claimed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by_staff_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "participant_name",
+    "phone",
+    "email",
+    "referring_staff",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    }
+  }
+}
