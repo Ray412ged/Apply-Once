@@ -35,6 +35,31 @@
       "type": "boolean",
       "default": false,
       "description": "Set once the participant has responded to the post-engagement follow-up (either 'still searching' or by confirming employment) so the prompt never shows twice for the same link."
+    },
+    "connected_by_staff_id": {
+      "type": "string",
+      "description": "OrganizationStaffAccount id for the EI staff member/admin associated with the participant connection."
+    },
+    "referral_id": {
+      "type": "string",
+      "description": "OrgParticipantReferral id when the participant joined through EI intake."
+    },
+    "age_confirmed_18_plus": {
+      "type": "boolean",
+      "default": false
+    },
+    "consent_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "connection_method": {
+      "type": "string",
+      "enum": [
+        "staff_code",
+        "platform_admin",
+        "ei_invite"
+      ],
+      "default": "staff_code"
     }
   },
   "required": [
