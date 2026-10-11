@@ -42,7 +42,7 @@
     },
     "delete": {
       "user_condition": {
-        "role": "admin"
+        "role": "system_only"
       }
     }
   }

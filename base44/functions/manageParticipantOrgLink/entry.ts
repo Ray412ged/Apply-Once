@@ -37,6 +37,7 @@ export default async function(req) {
     }
 
     const svc = base44.asServiceRole;
+
     const existing = await svc.entities.ParticipantOrgLink.filter(
       { participant_id: participantId, status: 'active' },
       '-linked_at',
@@ -55,6 +56,19 @@ export default async function(req) {
     }
 
     // action === 'create'
+    // Never create a connection to an unknown or inactive organization.
+    // Staff-controlled connection codes become the required participant
+    // onboarding path before real Organization Edition opportunities go live.
+    const orgs = await svc.entities.Organization.filter(
+      { id: organizationId },
+      "-created_date",
+      1
+    );
+    const organization = orgs[0] || null;
+    if (!organization || organization.active === false) {
+      return Response.json({ error: "Organization is inactive or unavailable" }, { status: 404 });
+    }
+
     if (existing.length > 0 && !body?.replace_existing) {
       return Response.json(
         {

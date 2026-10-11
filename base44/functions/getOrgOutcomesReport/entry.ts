@@ -38,10 +38,13 @@ export default async function(req) {
 
     const participantIds = [...new Set(allLinks.map((l) => l.participant_id))];
     const linkByParticipant = new Map();
+    const linksByParticipant = new Map();
     for (const l of allLinks) {
-      // If a participant has multiple historical links (rejoined after
-      // leaving), use their earliest linked_at for "days to first
-      // application" and their most recent for current classification.
+      const history = linksByParticipant.get(l.participant_id) || [];
+      history.push(l);
+      linksByParticipant.set(l.participant_id, history);
+
+      // Use the earliest enrollment for days-to-first-application.
       const existing = linkByParticipant.get(l.participant_id);
       if (!existing || new Date(l.linked_at) < new Date(existing.linked_at)) {
         linkByParticipant.set(l.participant_id, l);
@@ -79,7 +82,21 @@ export default async function(req) {
       const profile = profiles[0] || null;
       const isComplete = isCoreProfileComplete({ profile, employment, skills });
       if (isComplete) profilesCompletedCount++;
-      if (profile?.employment_status === 'Offer Accepted') offerAcceptedCount++;
+
+      // Count an accepted offer only when its recorded date falls inside one
+      // of this organization's actual connection periods. This prevents the
+      // same later hire from being counted by multiple organizations after a
+      // participant changes sponsors.
+      if (profile?.employment_status === 'Offer Accepted' && profile?.offer_accepted_date) {
+        const offerTime = new Date(profile.offer_accepted_date).getTime();
+        const orgLinks = linksByParticipant.get(participantId) || [];
+        const belongsToThisOrg = orgLinks.some((link) => {
+          const start = new Date(link.linked_at).getTime();
+          const end = link.revoked_at ? new Date(link.revoked_at).getTime() : Infinity;
+          return Number.isFinite(offerTime) && Number.isFinite(start) && offerTime >= start && offerTime <= end;
+        });
+        if (belongsToThisOrg) offerAcceptedCount++;
+      }
 
       // Current classification (uses only recent activity, matching
       // getOrgDashboard's own window) — for the "currently Ready to Apply"
@@ -165,7 +182,7 @@ export default async function(req) {
         profile_completion:
           'Reflects presence of core profile sections (contact info, employment history, skills, professional summary) — not a weighted quality score.',
         employment_outcomes:
-          'Offer Accepted counts are entirely participant self-reported, with no employer verification of any kind.',
+          'Offer Accepted counts are participant self-reported and counted only when the recorded offer date falls within this organization\'s connection period. Employer verification is not yet available.',
         general:
           'These figures represent aggregate program outcomes as recorded in Apply Once, not verified employer or third-party records.',
       },
@@ -194,7 +211,7 @@ function emptyReport(organizationId) {
       profile_completion:
         'Reflects presence of core profile sections (contact info, employment history, skills, professional summary) — not a weighted quality score.',
       employment_outcomes:
-        'Offer Accepted counts are entirely participant self-reported, with no employer verification of any kind.',
+        'Offer Accepted counts are participant self-reported and counted only when the recorded offer date falls within this organization\'s connection period. Employer verification is not yet available.',
       general:
         'These figures represent aggregate program outcomes as recorded in Apply Once, not verified employer or third-party records.',
     },

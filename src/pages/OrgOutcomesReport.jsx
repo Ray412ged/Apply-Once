@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
   Loader2,
   ShieldAlert,
-  ArrowLeft,
   Info,
   Users,
   FileCheck,

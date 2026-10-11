@@ -24,12 +24,31 @@ export async function resolveOrgContext(base44) {
     throw err;
   }
 
-  // v0.1 intentionally supports one active organization staff assignment.
+  if (staffRows.length > 1) {
+    const err = new Error("Multiple active organization staff assignments found for this account");
+    err.status = 409;
+    throw err;
+  }
+
   const staffAccount = staffRows[0];
+  const orgs = await svc.entities.Organization.filter(
+    { id: staffAccount.organization_id },
+    "-created_date",
+    1
+  );
+  const organization = orgs[0] || null;
+
+  if (!organization || organization.active === false) {
+    const err = new Error("Organization workspace is inactive or unavailable");
+    err.status = 403;
+    throw err;
+  }
+
   return {
     user,
     svc,
     organizationId: staffAccount.organization_id,
+    organization,
     orgRole: staffAccount.org_role || "staff",
     staffAccount,
   };

@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { resolveJobSeekerOrg } from '../../shared/jobSeekerOrg.ts';
 
 export default async function(req) {
   try {
@@ -14,33 +15,47 @@ export default async function(req) {
     const job = await svc.entities.JobPosting.get(id);
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
-    const links = user
-      ? await svc.entities.ParticipantOrgLink.filter(
-          { participant_id: user.id, status: "active" }, "-linked_at", 1
-        )
-      : [];
+    const orgContext = await resolveJobSeekerOrg(base44, user);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const closingDate = job.application_deadline || job.expiration_date;
+    const stillOpen =
+      !closingDate ||
+      (Number.isFinite(new Date(closingDate).getTime()) && new Date(closingDate) >= today);
 
     let allowed = false;
-    if (links.length > 0) {
-      allowed = job.organization_id === links[0].organization_id && job.verification_status === "Verified";
+
+    if (orgContext) {
+      allowed =
+        job.organization_id === orgContext.organizationId &&
+        job.verification_status === "Verified" &&
+        job.status === "Active" &&
+        stillOpen;
     } else {
-      allowed = !job.organization_id;
+      allowed = !job.organization_id && job.status === "Active" && stillOpen;
     }
 
+    // A user may reopen a job behind their own historical application even
+    // after the posting is no longer active. This preserves application history
+    // without exposing a different org's live opportunity feed.
     if (!allowed && user) {
       const apps = await svc.entities.Application.filter(
-        { created_by_id: user.id, job_posting_id: id }, "-created_date", 1
+        { created_by_id: user.id, job_posting_id: id },
+        "-created_date",
+        1
       );
       if (apps.length > 0) {
-        allowed = links.length > 0
-          ? job.organization_id === links[0].organization_id
-          : !job.organization_id;
+        allowed = true;
       }
     }
 
     if (!allowed) return Response.json({ error: "Job not available" }, { status: 404 });
     return Response.json({ job });
   } catch (error) {
-    return Response.json({ error: error?.message || "Failed to load job" }, { status: 500 });
+    const status = Number(error?.status) || 500;
+    return Response.json(
+      { error: error?.message || "Failed to load job" },
+      { status }
+    );
   }
 }
