@@ -1,0 +1,77 @@
+{
+  "name": "EmployerContact",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string"
+    },
+    "employer_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "department": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "preferred_contact_method": {
+      "type": "string",
+      "enum": [
+        "Email",
+        "Phone",
+        "Text",
+        "Other"
+      ]
+    },
+    "relationship_owner_staff_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Inactive"
+      ],
+      "default": "Active"
+    }
+  },
+  "required": [
+    "organization_id",
+    "employer_id",
+    "name"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    }
+  }
+}

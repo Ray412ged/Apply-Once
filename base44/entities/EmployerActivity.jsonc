@@ -1,0 +1,81 @@
+{
+  "name": "EmployerActivity",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string"
+    },
+    "employer_id": {
+      "type": "string"
+    },
+    "contact_id": {
+      "type": "string"
+    },
+    "staff_user_id": {
+      "type": "string"
+    },
+    "activity_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "activity_type": {
+      "type": "string",
+      "enum": [
+        "Call",
+        "Email",
+        "Meeting",
+        "Employer Visit",
+        "Hiring Event",
+        "Follow-up",
+        "Other"
+      ]
+    },
+    "note": {
+      "type": "string"
+    },
+    "next_step": {
+      "type": "string"
+    },
+    "next_step_due": {
+      "type": "string",
+      "format": "date"
+    },
+    "next_step_owner_staff_id": {
+      "type": "string"
+    },
+    "next_step_done": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "organization_id",
+    "employer_id",
+    "staff_user_id",
+    "activity_date",
+    "activity_type",
+    "note"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "system_only"
+      }
+    }
+  }
+}
