@@ -40,6 +40,14 @@ describe("organization employer security", () => {
     expect(canEditEmployer(ctx(), { relationship_owner_staff_id: "other", created_by_staff_id: "staff-a", status: "Lead" })).toBe(true);
   });
 
+  it("denies staff editing an active employer they do not own", () => {
+    expect(canEditEmployer(ctx(), { relationship_owner_staff_id: "staff-b", created_by_staff_id: "staff-a", status: "Active" })).toBe(false);
+  });
+
+  it("denies a lead creator after promotion when they are not the owner", () => {
+    expect(canEditEmployer(ctx(), { relationship_owner_staff_id: "staff-b", created_by_staff_id: "staff-a", status: "Active" })).toBe(false);
+  });
+
   it("rejects a cross-org employer id", async () => {
     const c = ctx({
       svc: {
@@ -76,5 +84,18 @@ describe("organization employer security", () => {
       },
     });
     await expect(requireActiveOrgStaff(c, "staff-b")).resolves.toMatchObject({ id: "staff-b" });
+  });
+
+  it("rejects inactive or other-org staff assignments", async () => {
+    const c = ctx({
+      svc: {
+        entities: {
+          OrganizationStaffAccount: {
+            filter: async () => [],
+          },
+        },
+      },
+    });
+    await expect(requireActiveOrgStaff(c, "staff-b")).rejects.toMatchObject({ status: 404 });
   });
 });

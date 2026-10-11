@@ -86,7 +86,13 @@ export default async function(req) {
         };
       });
 
-      return Response.json({ employers: enriched, staff: staffRows });
+      return Response.json({
+        employers: enriched,
+        staff: staffRows.map((s) => ({
+          id: s.id,
+          display_name: s.display_name || "Staff",
+        })),
+      });
     }
 
     if (action === "get") {
@@ -118,7 +124,10 @@ export default async function(req) {
         );
       }
 
-      let ownerStaffId = body?.relationship_owner_staff_id || ctx.staffAccount.id;
+      const ownerStaffId =
+        ctx.orgRole === "org_admin"
+          ? (body?.relationship_owner_staff_id || ctx.staffAccount.id)
+          : ctx.staffAccount.id;
       await requireActiveOrgStaff(ctx, ownerStaffId);
 
       const requestedStatus = body?.status || "Lead";
@@ -185,11 +194,15 @@ export default async function(req) {
       }
 
       if (body?.relationship_owner_staff_id !== undefined) {
-        if (ctx.orgRole !== "org_admin" && body.relationship_owner_staff_id !== ctx.staffAccount.id) {
+        const requestedOwner = body.relationship_owner_staff_id;
+        const isReassignment = requestedOwner !== employer.relationship_owner_staff_id;
+        if (ctx.orgRole !== "org_admin" && isReassignment) {
           throw httpError("Only an organization admin can reassign employer ownership", 403);
         }
-        await requireActiveOrgStaff(ctx, body.relationship_owner_staff_id);
-        updates.relationship_owner_staff_id = body.relationship_owner_staff_id;
+        if (isReassignment) {
+          await requireActiveOrgStaff(ctx, requestedOwner);
+          updates.relationship_owner_staff_id = requestedOwner;
+        }
       }
 
       if (body?.status !== undefined) {

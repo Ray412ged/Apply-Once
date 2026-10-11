@@ -44,13 +44,22 @@ export default async function(req) {
       const note = String(body?.note || "").trim();
       if (!note) throw httpError("Activity note is required", 400);
 
-      const now = body?.activity_date || new Date().toISOString();
+      const activityDate = body?.activity_date || new Date().toISOString();
+      const activityTime = new Date(activityDate).getTime();
+      const serverNow = Date.now();
+      if (!Number.isFinite(activityTime)) {
+        throw httpError("Activity date is invalid", 400);
+      }
+      if (activityTime > serverNow) {
+        throw httpError("Activity date cannot be in the future", 400);
+      }
+
       const created = await ctx.svc.entities.EmployerActivity.create({
         organization_id: ctx.organizationId,
         employer_id: employer.id,
         contact_id: body?.contact_id || "",
         staff_user_id: ctx.user.id,
-        activity_date: now,
+        activity_date: activityDate,
         activity_type: body?.activity_type || "Follow-up",
         note,
         next_step: body?.next_step || "",
@@ -59,8 +68,16 @@ export default async function(req) {
         next_step_done: false,
       });
 
+      const existingLastActivityTime = employer.last_activity_date
+        ? new Date(employer.last_activity_date).getTime()
+        : NaN;
+      const lastActivityDate =
+        Number.isFinite(existingLastActivityTime) && existingLastActivityTime > activityTime
+          ? employer.last_activity_date
+          : activityDate;
+
       await ctx.svc.entities.OrgEmployer.update(employer.id, {
-        last_activity_date: now,
+        last_activity_date: lastActivityDate,
       });
 
       return Response.json({ activity: created });

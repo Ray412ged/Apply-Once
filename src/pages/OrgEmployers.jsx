@@ -124,7 +124,7 @@ export default function OrgEmployers() {
 
   const staffName = (staffId) => {
     const person = staff.find((s) => s.id === staffId);
-    return person?.display_name || person?.email || "Unassigned";
+    return person?.display_name || "Unassigned";
   };
 
   async function handleArchive() {
@@ -386,12 +386,14 @@ export default function OrgEmployers() {
                                     {activity.next_step_due ? ` · due ${new Date(activity.next_step_due + "T12:00:00").toLocaleDateString()}` : ""}
                                   </span>
                                   {!activity.next_step_done && (
-                                    <button
-                                      className="font-medium text-primary hover:underline"
-                                      onClick={() => handleCompleteNextStep(activity.id)}
-                                    >
-                                      Mark done
-                                    </button>
+                                    (isAdmin || activity.next_step_owner_staff_id === session?.staff?.id) ? (
+                                      <button
+                                        className="font-medium text-primary hover:underline"
+                                        onClick={() => handleCompleteNextStep(activity.id)}
+                                      >
+                                        Mark done
+                                      </button>
+                                    ) : null
                                   )}
                                   {activity.next_step_done && <CheckCircle2 className="w-4 h-4 text-success" />}
                                 </div>
@@ -430,6 +432,7 @@ export default function OrgEmployers() {
             onClose={() => setShowContactForm(false)}
             employerId={selected.id}
             staff={staff}
+            isAdmin={isAdmin}
             currentStaffId={session?.staff?.id}
             onSaved={async () => {
               setShowContactForm(false);
@@ -563,10 +566,10 @@ function EmployerForm({ open, onClose, employer, staff, isAdmin, currentStaffId,
             <select
               value={form.relationship_owner_staff_id || ""}
               onChange={(e) => update("relationship_owner_staff_id", e.target.value)}
-              disabled={!isAdmin && !!employer}
+              disabled={!isAdmin}
               className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
             >
-              {staff.map((s) => <option key={s.id} value={s.id}>{s.display_name || s.email || s.user_id}</option>)}
+              {staff.map((s) => <option key={s.id} value={s.id}>{s.display_name || "Staff"}</option>)}
             </select>
           </Field>
           {isAdmin && (
@@ -602,7 +605,7 @@ function EmployerForm({ open, onClose, employer, staff, isAdmin, currentStaffId,
   );
 }
 
-function ContactForm({ open, onClose, employerId, staff, currentStaffId, onSaved }) {
+function ContactForm({ open, onClose, employerId, staff, isAdmin, currentStaffId, onSaved }) {
   const [form, setForm] = useState({});
 
   useEffect(() => {
@@ -641,9 +644,10 @@ function ContactForm({ open, onClose, employerId, staff, currentStaffId, onSaved
             <select
               value={form.relationship_owner_staff_id || ""}
               onChange={(e) => setForm({ ...form, relationship_owner_staff_id: e.target.value })}
+              disabled={!isAdmin}
               className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
             >
-              {staff.map((s) => <option key={s.id} value={s.id}>{s.display_name || s.email || s.user_id}</option>)}
+              {staff.map((s) => <option key={s.id} value={s.id}>{s.display_name || "Staff"}</option>)}
             </select>
           </Field>
         </div>
@@ -728,7 +732,7 @@ function ActivityForm({ open, onClose, employerId, contacts, staff, currentStaff
                   onChange={(e) => setForm({ ...form, next_step_owner_staff_id: e.target.value })}
                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  {staff.map((s) => <option key={s.id} value={s.id}>{s.display_name || s.email || s.user_id}</option>)}
+                  {staff.map((s) => <option key={s.id} value={s.id}>{s.display_name || "Staff"}</option>)}
                 </select>
               </Field>
             </div>

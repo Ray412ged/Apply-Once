@@ -30,7 +30,10 @@ export default async function(req) {
       const name = String(body?.name || "").trim();
       if (!name) throw httpError("Contact name is required", 400);
 
-      const ownerStaffId = body?.relationship_owner_staff_id || ctx.staffAccount.id;
+      const ownerStaffId =
+        ctx.orgRole === "org_admin"
+          ? (body?.relationship_owner_staff_id || ctx.staffAccount.id)
+          : ctx.staffAccount.id;
       await requireActiveOrgStaff(ctx, ownerStaffId);
 
       const created = await ctx.svc.entities.EmployerContact.create({
@@ -64,11 +67,15 @@ export default async function(req) {
       }
 
       if (body?.relationship_owner_staff_id !== undefined) {
-        if (ctx.orgRole !== "org_admin" && body.relationship_owner_staff_id !== ctx.staffAccount.id) {
+        const requestedOwner = body.relationship_owner_staff_id;
+        const isReassignment = requestedOwner !== contact.relationship_owner_staff_id;
+        if (ctx.orgRole !== "org_admin" && isReassignment) {
           throw httpError("Only an organization admin can reassign contact ownership", 403);
         }
-        await requireActiveOrgStaff(ctx, body.relationship_owner_staff_id);
-        updates.relationship_owner_staff_id = body.relationship_owner_staff_id;
+        if (isReassignment) {
+          await requireActiveOrgStaff(ctx, requestedOwner);
+          updates.relationship_owner_staff_id = requestedOwner;
+        }
       }
 
       if (body?.status !== undefined) {
